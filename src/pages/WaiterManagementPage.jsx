@@ -8,20 +8,11 @@ import {
 } from 'lucide-react'
 import { formatCurrency, cn, getInitials } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
+import api from '@/lib/api'
 
 /* ─────────────────────────────────────────────────────────
    MOCK DATA — replace with API calls in production
 ───────────────────────────────────────────────────────── */
-const MOCK_WAITERS = [
-  { id: 1,  name: 'Raju Verma',     phone: '+91 98765 43210', email: 'raju@restaurant.com',   role: 'Senior Waiter', shift: 'Morning', status: 'active',   avatar: '👨', joinDate: '2024-03-15', rating: 4.8, ordersToday: 18, ordersMonth: 342, revenueMonth: 142000, rewardPoints: 2850, tips: 4200, tables: ['T1', 'T2', 'T5', 'T8'], attendance: 96 },
-  { id: 2,  name: 'Suresh Kumar',   phone: '+91 87654 32109', email: 'suresh@restaurant.com', role: 'Waiter',        shift: 'Morning', status: 'active',   avatar: '👨', joinDate: '2024-06-01', rating: 4.5, ordersToday: 15, ordersMonth: 298, revenueMonth: 118000, rewardPoints: 2100, tips: 3500, tables: ['T3', 'T4', 'T6'],       attendance: 92 },
-  { id: 3,  name: 'Amit Sharma',    phone: '+91 76543 21098', email: 'amit@restaurant.com',   role: 'Waiter',        shift: 'Evening', status: 'active',   avatar: '👨', joinDate: '2024-08-20', rating: 4.7, ordersToday: 12, ordersMonth: 265, revenueMonth: 96000,  rewardPoints: 1780, tips: 2900, tables: ['T7', 'T9', 'T10'],     attendance: 94 },
-  { id: 4,  name: 'Deepak Singh',   phone: '+91 65432 10987', email: 'deepak@restaurant.com', role: 'Waiter',        shift: 'Evening', status: 'active',   avatar: '👨', joinDate: '2025-01-10', rating: 4.3, ordersToday: 10, ordersMonth: 210, revenueMonth: 82000,  rewardPoints: 1200, tips: 2100, tables: ['T11', 'T12'],          attendance: 88 },
-  { id: 5,  name: 'Priya Patel',    phone: '+91 54321 09876', email: 'priya@restaurant.com',  role: 'Head Waiter',   shift: 'Morning', status: 'active',   avatar: '👩', joinDate: '2023-11-05', rating: 4.9, ordersToday: 22, ordersMonth: 410, revenueMonth: 186000, rewardPoints: 4200, tips: 6100, tables: ['T1', 'T2', 'T3', 'T4'], attendance: 98 },
-  { id: 6,  name: 'Neha Gupta',     phone: '+91 43210 98765', email: 'neha@restaurant.com',   role: 'Waiter',        shift: 'Split',   status: 'active',   avatar: '👩', joinDate: '2025-02-15', rating: 4.6, ordersToday: 14, ordersMonth: 280, revenueMonth: 105000, rewardPoints: 1650, tips: 3200, tables: ['T5', 'T6', 'T13'],     attendance: 91 },
-  { id: 7,  name: 'Vikram Rao',     phone: '+91 32109 87654', email: 'vikram@restaurant.com', role: 'Waiter',        shift: 'Morning', status: 'on_leave', avatar: '👨', joinDate: '2024-10-12', rating: 4.4, ordersToday: 0,  ordersMonth: 180, revenueMonth: 68000,  rewardPoints: 980,  tips: 1800, tables: [],                     attendance: 85 },
-  { id: 8,  name: 'Kavita Devi',    phone: '+91 21098 76543', email: 'kavita@restaurant.com', role: 'Trainee',       shift: 'Evening', status: 'active',   avatar: '👩', joinDate: '2026-01-20', rating: 4.1, ordersToday: 6,  ordersMonth: 120, revenueMonth: 42000,  rewardPoints: 450,  tips: 900,  tables: ['T14', 'T15'],          attendance: 90 },
-]
 
 const MOCK_REWARD_HISTORY = [
   { id: 1, waiter: 'Priya Patel',   type: 'earn',   points: 50,  reason: '5-star customer review',    time: '10 min ago' },
@@ -71,9 +62,28 @@ export default function WaiterManagementPage() {
   const [showAdjustPoints, setShowAdjustPoints] = useState(null)
   const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', role: 'Waiter', shift: 'Morning' })
   const [pointsForm, setPointsForm] = useState({ points: '', reason: '' })
-  const [waiters, setWaiters] = useState(MOCK_WAITERS)
+  const [waiters, setWaiters] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const { addNotification, confirmAction } = useUIStore()
+
+  useEffect(() => {
+    fetchWaiters()
+  }, [])
+
+  const fetchWaiters = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/tenant/waiters')
+      setWaiters(res.data.data)
+    } catch (error) {
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to fetch waiters' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
 
   // Computed
   const totalWaiters = waiters.length
@@ -90,35 +100,47 @@ export default function WaiterManagementPage() {
     return matchSearch && matchShift && matchStatus
   }).sort((a, b) => b.ordersMonth - a.ordersMonth)
 
-  const handleAddWaiter = (e) => {
+  const handleAddWaiter = async (e) => {
     e.preventDefault()
-    const newWaiter = {
-      id: Date.now(),
-      ...addForm,
-      status: 'active', avatar: '👤', joinDate: new Date().toISOString().split('T')[0],
-      rating: 0, ordersToday: 0, ordersMonth: 0, revenueMonth: 0,
-      rewardPoints: 0, tips: 0, tables: [], attendance: 100
+    try {
+      const res = await api.post('/tenant/waiters', addForm)
+      const newWaiter = res.data.data
+      // Add defaults to match schema immediately locally so UI doesn't crash on undefined
+      if (!newWaiter.ordersToday) newWaiter.ordersToday = 0;
+      if (!newWaiter.ordersMonth) newWaiter.ordersMonth = 0;
+      if (!newWaiter.revenueMonth) newWaiter.revenueMonth = 0;
+      
+      setWaiters([newWaiter, ...waiters])
+      setShowAddModal(false)
+      setAddForm({ name: '', phone: '', email: '', role: 'Waiter', shift: 'Morning', password: '' })
+      addNotification({ type: 'success', title: 'Waiter Added', message: `${newWaiter.name} has been registered` })
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Error', message: err.response?.data?.message || 'Failed to add waiter' })
     }
-    setWaiters([newWaiter, ...waiters])
-    setShowAddModal(false)
-    setAddForm({ name: '', phone: '', email: '', role: 'Waiter', shift: 'Morning' })
-    addNotification({ type: 'success', title: 'Waiter Added', message: `${newWaiter.name} has been registered` })
   }
 
-  const handleAdjustPoints = (type) => {
+  const handleAdjustPoints = async (type) => {
     if (!pointsForm.points || Number(pointsForm.points) <= 0) return
     const pts = type === 'add' ? Number(pointsForm.points) : -Number(pointsForm.points)
-    setWaiters(waiters.map(w => w.id === showAdjustPoints.id
-      ? { ...w, rewardPoints: Math.max(0, w.rewardPoints + pts) }
-      : w
-    ))
-    addNotification({
-      type: pts > 0 ? 'success' : 'info',
-      title: 'Points Updated',
-      message: `${showAdjustPoints.name}: ${pts > 0 ? '+' : ''}${pts} pts — ${pointsForm.reason || 'Manual adjustment'}`
-    })
-    setShowAdjustPoints(null)
-    setPointsForm({ points: '', reason: '' })
+    
+    try {
+      const res = await api.post(`/tenant/waiters/${showAdjustPoints.id}/points`, {
+        points: pts,
+        reason: pointsForm.reason
+      })
+      const updated = res.data.data
+      setWaiters(waiters.map(w => w.id === updated.id ? { ...w, rewardPoints: updated.waiterProfile?.rewardPoints || w.rewardPoints } : w))
+      
+      addNotification({
+        type: pts > 0 ? 'success' : 'info',
+        title: 'Points Updated',
+        message: `${showAdjustPoints.name}: ${pts > 0 ? '+' : ''}${pts} pts — ${pointsForm.reason || 'Manual adjustment'}`
+      })
+      setShowAdjustPoints(null)
+      setPointsForm({ points: '', reason: '' })
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Error', message: err.response?.data?.message || 'Failed to update points' })
+    }
   }
 
   const handleDeleteWaiter = async (waiter) => {
@@ -128,9 +150,14 @@ export default function WaiterManagementPage() {
       confirmText: 'Remove'
     })
     if (ok) {
-      setWaiters(waiters.filter(w => w.id !== waiter.id))
-      if (selectedWaiter?.id === waiter.id) setSelectedWaiter(null)
-      addNotification({ type: 'success', title: 'Waiter Removed', message: waiter.name })
+      try {
+        await api.delete(`/tenant/waiters/${waiter.id}`)
+        setWaiters(waiters.filter(w => w.id !== waiter.id))
+        if (selectedWaiter?.id === waiter.id) setSelectedWaiter(null)
+        addNotification({ type: 'success', title: 'Waiter Removed', message: waiter.name })
+      } catch (err) {
+        addNotification({ type: 'error', title: 'Error', message: 'Failed to delete waiter' })
+      }
     }
   }
 

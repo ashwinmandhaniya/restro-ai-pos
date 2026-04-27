@@ -8,80 +8,12 @@ import {
 } from 'lucide-react'
 import { cn, formatCurrency, formatTime, getInitials } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
+import api from '@/lib/api'
 
 /* ─────────────────────────────────────────────────────────
-   MOCK DATA — plugs into existing WaiterManagement data
-   In production, replace with API/socket calls
+   LIVE DATA — Using Backend API & Socket Events
 ───────────────────────────────────────────────────────── */
-const MOCK_WAITERS = [
-  {
-    id: 1, name: 'Raju Verma', role: 'Senior Waiter', shift: 'Morning',
-    status: 'serving', avatar: '👨', rating: 4.8,
-    currentTable: 'T5', ordersCompleted: 18, activeOrders: 2,
-    lastAction: 'Took order at T5', lastActionTime: new Date(Date.now() - 120000),
-    tables: ['T1', 'T2', 'T5', 'T8'], rewardPoints: 2850,
-  },
-  {
-    id: 2, name: 'Suresh Kumar', role: 'Waiter', shift: 'Morning',
-    status: 'available', avatar: '👨', rating: 4.5,
-    currentTable: null, ordersCompleted: 15, activeOrders: 0,
-    lastAction: 'Cleared T3', lastActionTime: new Date(Date.now() - 300000),
-    tables: ['T3', 'T4', 'T6'], rewardPoints: 2100,
-  },
-  {
-    id: 3, name: 'Amit Sharma', role: 'Waiter', shift: 'Evening',
-    status: 'serving', avatar: '👨', rating: 4.7,
-    currentTable: 'T9', ordersCompleted: 12, activeOrders: 3,
-    lastAction: 'Serving food at T9', lastActionTime: new Date(Date.now() - 60000),
-    tables: ['T7', 'T9', 'T10'], rewardPoints: 1780,
-  },
-  {
-    id: 4, name: 'Deepak Singh', role: 'Waiter', shift: 'Evening',
-    status: 'on_break', avatar: '👨', rating: 4.3,
-    currentTable: null, ordersCompleted: 10, activeOrders: 0,
-    lastAction: 'Break started', lastActionTime: new Date(Date.now() - 600000),
-    tables: ['T11', 'T12'], rewardPoints: 1200,
-  },
-  {
-    id: 5, name: 'Priya Patel', role: 'Head Waiter', shift: 'Morning',
-    status: 'serving', avatar: '👩', rating: 4.9,
-    currentTable: 'T2', ordersCompleted: 22, activeOrders: 4,
-    lastAction: 'Billing at T2', lastActionTime: new Date(Date.now() - 45000),
-    tables: ['T1', 'T2', 'T3', 'T4'], rewardPoints: 4200,
-  },
-  {
-    id: 6, name: 'Neha Gupta', role: 'Waiter', shift: 'Split',
-    status: 'serving', avatar: '👩', rating: 4.6,
-    currentTable: 'T13', ordersCompleted: 14, activeOrders: 1,
-    lastAction: 'Taking order at T13', lastActionTime: new Date(Date.now() - 90000),
-    tables: ['T5', 'T6', 'T13'], rewardPoints: 1650,
-  },
-  {
-    id: 7, name: 'Vikram Rao', role: 'Waiter', shift: 'Morning',
-    status: 'on_leave', avatar: '👨', rating: 4.4,
-    currentTable: null, ordersCompleted: 0, activeOrders: 0,
-    lastAction: 'On leave today', lastActionTime: new Date(Date.now() - 3600000),
-    tables: [], rewardPoints: 980,
-  },
-  {
-    id: 8, name: 'Kavita Devi', role: 'Trainee', shift: 'Evening',
-    status: 'available', avatar: '👩', rating: 4.1,
-    currentTable: null, ordersCompleted: 6, activeOrders: 0,
-    lastAction: 'Set up T14', lastActionTime: new Date(Date.now() - 480000),
-    tables: ['T14', 'T15'], rewardPoints: 450,
-  },
-]
 
-const MOCK_LIVE_ORDERS = [
-  { id: 1, waiter: 'Priya Patel', table: 'T2', items: 6, status: 'billing', time: '12:45 PM' },
-  { id: 2, waiter: 'Raju Verma', table: 'T5', items: 4, status: 'preparing', time: '12:52 PM' },
-  { id: 3, waiter: 'Amit Sharma', table: 'T9', items: 8, status: 'serving', time: '12:38 PM' },
-  { id: 4, waiter: 'Neha Gupta', table: 'T13', items: 3, status: 'new', time: '12:58 PM' },
-  { id: 5, waiter: 'Priya Patel', table: 'T3', items: 5, status: 'preparing', time: '12:50 PM' },
-  { id: 6, waiter: 'Raju Verma', table: 'T1', items: 2, status: 'served', time: '12:30 PM' },
-  { id: 7, waiter: 'Amit Sharma', table: 'T10', items: 4, status: 'preparing', time: '12:55 PM' },
-  { id: 8, waiter: 'Amit Sharma', table: 'T7', items: 3, status: 'new', time: '12:59 PM' },
-]
 
 const STATUS_CONFIG = {
   serving:   { label: 'Serving',    bg: 'bg-primary-500',  glow: 'shadow-primary-500/40',  text: 'text-primary-600 dark:text-primary-400',  border: 'border-primary-500',  bgLight: 'bg-primary-500/10', dot: 'bg-primary-500' },
@@ -109,11 +41,94 @@ const SHIFT_STYLES = {
    COMPONENT
 ───────────────────────────────────────────────────────── */
 export default function WaiterDisplayPage() {
+  const [waiters, setWaiters] = useState([])
+  const [liveOrders, setLiveOrders] = useState([])
   const [currentTime, setCurrentTime] = useState(new Date())
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [viewMode, setViewMode] = useState('floor') // 'floor' | 'leaderboard'
   const [selectedShift, setSelectedShift] = useState('all')
+
+  const { socket } = useUIStore()
+
+  // Fetch initial data
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // Socket IO real-time tracking
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleWaiterUpdate = (updatedWaiter) => {
+      // Map schema structure flattening if it comes directly via mongoose document
+      const p = updatedWaiter.waiterProfile || {};
+      const mapped = {
+        id: updatedWaiter._id || updatedWaiter.id,
+        name: updatedWaiter.name,
+        email: updatedWaiter.email,
+        phone: updatedWaiter.phone || "",
+        role: updatedWaiter.role,
+        shift: p.shift || "Morning",
+        status: p.status || "available",
+        tables: p.tables || [],
+        rewardPoints: p.rewardPoints || 0,
+        tips: p.tips || 0,
+        attendance: p.attendance || 100,
+        rating: p.rating || 0,
+        ordersCompleted: p.ordersCompleted || 0,
+        activeOrders: p.activeOrders || 0,
+        lastAction: p.lastAction || "",
+        lastActionTime: p.lastActionTime || null,
+        avatar: "👨"
+      };
+
+      setWaiters(prev => {
+        const curIdx = prev.findIndex(w => w.id === mapped.id)
+        if (curIdx > -1) {
+          const nw = [...prev];
+          nw[curIdx] = mapped;
+          return nw;
+        }
+        return [...prev, mapped]
+      });
+    }
+
+    const handleOrderUpdate = () => {
+      fetchData(); // Simplest way to sync state consistency across the dashboard
+    }
+
+    socket.on('waiter_update', handleWaiterUpdate)
+    socket.on('order:updated', handleOrderUpdate)
+    socket.on('order:new', handleOrderUpdate)
+
+    return () => {
+      socket.off('waiter_update', handleWaiterUpdate)
+      socket.off('order:updated', handleOrderUpdate)
+      socket.off('order:new', handleOrderUpdate)
+    }
+  }, [socket])
+
+  const fetchData = async () => {
+    try {
+      const waitRes = await api.get('/tenant/waiters')
+      setWaiters(waitRes.data.data || [])
+
+      const orderRes = await api.get('/orders?status=active')
+      const ordersRaw = orderRes.data.data || []
+      const orders = ordersRaw.map(o => ({
+        id: o._id,
+        waiter: o.waiterId?.name || 'Unassigned',
+        table: o.tableId?.name || o.tableId?.number || 'T?',
+        items: o.items?.length || 0,
+        status: o.status === 'active' ? 'preparing' : o.status,
+        time: formatTime(o.createdAt || new Date())
+      }))
+      setLiveOrders(orders)
+    } catch (error) {
+      console.error('WaiterDisplayPage fetch error:', error)
+    }
+  }
 
   // Clock updater
   useEffect(() => {
@@ -133,9 +148,9 @@ export default function WaiterDisplayPage() {
 
   // Computed stats
   const filteredWaiters = useMemo(() => {
-    if (selectedShift === 'all') return MOCK_WAITERS
-    return MOCK_WAITERS.filter(w => w.shift === selectedShift)
-  }, [selectedShift])
+    if (selectedShift === 'all') return waiters
+    return waiters.filter(w => w.shift === selectedShift)
+  }, [selectedShift, waiters])
 
   const stats = useMemo(() => {
     const active = filteredWaiters.filter(w => w.status !== 'on_leave')
@@ -167,6 +182,13 @@ export default function WaiterDisplayPage() {
 
   return (
     <div className="fixed inset-0 bg-surface-50 dark:bg-surface-950 z-50 flex flex-col font-sans overflow-hidden">
+      <div className="flex items-center gap-1.5 translate-y-[2px]">
+              <span className="relative flex h-2.5 w-2.5 mr-1">
+                <span className="animate-ping bg-green-400 absolute inline-flex h-full w-full rounded-full opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+              </span>
+              <span className="text-[10px] font-bold text-surface-500 tracking-widest uppercase">Live Socket.IO Sync</span>
+            </div>
 
       {/* ═══ HEADER ═══ */}
       <header className="h-auto min-h-[72px] py-3 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 px-6 flex flex-col lg:flex-row items-center justify-between shadow-md dark:shadow-2xl shrink-0 gap-3">
@@ -465,14 +487,14 @@ export default function WaiterDisplayPage() {
                   <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
                   <h2 className="text-sm font-black text-surface-900 dark:text-white uppercase tracking-widest">Live Orders</h2>
                   <span className="ml-auto bg-surface-100 dark:bg-surface-800 px-2.5 py-1 rounded-lg text-[10px] font-black text-primary-600 dark:text-primary-400 border border-surface-200 dark:border-surface-700">
-                    {MOCK_LIVE_ORDERS.length}
+                    {liveOrders.length}
                   </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-surface-300 dark:scrollbar-thumb-surface-700">
-                  <AnimatePresence>
-                    {MOCK_LIVE_ORDERS.map((order, i) => {
-                      const orderSt = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.new
+                <div className="flex-1 overflow-y-auto px-4 py-3 no-scrollbar space-y-2.5">
+              <AnimatePresence>
+                {liveOrders.map(order => {
+                  const orderSt = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.new
                       return (
                         <motion.div
                           key={order.id}
