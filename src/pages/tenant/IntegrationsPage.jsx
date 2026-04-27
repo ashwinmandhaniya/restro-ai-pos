@@ -16,6 +16,7 @@ import {
   LoyaltyLogo, BingageLogo, ReeloLogo, MloyalLogo, KringleLogo, EwardsLogo, FroogalLogo, UengagePrismLogo,
   TallyLogo,
   RazorpayLogo, PaytmLogo, GooglePayLogo, PhonePeLogo, UpiLogo, StripeLogo, CashfreeLogo,
+  BrevoLogo,
 } from './integration-logos.jsx';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -642,6 +643,24 @@ const PLATFORMS = [
     logo: 'CF',
     domain: 'cashfree.com',
     LogoComponent: CashfreeLogo,
+  },
+  {
+    id: 'brevo',
+    name: 'Brevo',
+    category: 'Marketing',
+    description: 'Send high-converting email and SMS campaigns seamlessly with Brevo integration.',
+    color: '#009286',
+    bgColor: 'bg-emerald-500/10',
+    textColor: 'text-emerald-500',
+    borderColor: 'border-emerald-500/20',
+    fields: [
+      { key: 'senderEmail', label: 'Sender Email', placeholder: 'hello@yourrestaurant.com', type: 'text' },
+      { key: 'apiKey',      label: 'API Key',      placeholder: 'xkeysib-xxxxxxxxxxxx',     type: 'password' },
+    ],
+    docsUrl: 'https://developers.brevo.com/',
+    logo: 'B',
+    domain: 'brevo.com',
+    LogoComponent: BrevoLogo,
   },
 ];
 

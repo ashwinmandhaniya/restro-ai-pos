@@ -5,6 +5,7 @@ import phonepeImg from '@/assets/integrations/phonepe.png';
 import upiImg from '@/assets/integrations/upi.png';
 import stripeImg from '@/assets/integrations/stripe.png';
 import cashfreeImg from '@/assets/integrations/cashfree.png';
+import brevoImg from '@/assets/integrations/brevo.png';
 
 /**
  * Hand-crafted inline SVG logos for every integration platform.
@@ -434,6 +435,15 @@ export function CashfreeLogo({ size = 36 }) {
   return (
     <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 8 }}>
       <img src={cashfreeImg} alt="Cashfree" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+    </div>
+  );
+}
+
+// Brevo — Official high-fidelity logo
+export function BrevoLogo({ size = 36 }) {
+  return (
+    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 8, backgroundColor: '#009286' }}>
+      <img src={brevoImg} alt="Brevo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
     </div>
   );
 }

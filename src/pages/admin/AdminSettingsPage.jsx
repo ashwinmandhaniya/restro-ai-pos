@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, ScrollText, Shield, Save, Plus, X, Trash2, Pencil, Globe, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, ScrollText, Shield, Save, Plus, X, Trash2, Pencil, Globe, Eye, EyeOff, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAdminConfigStore from '@/store/adminConfigStore';
 import { cn } from '@/lib/utils';
@@ -154,6 +154,157 @@ function GoogleOAuthTab() {
   );
 }
 
+/* ── Brevo Email Settings Tab ── */
+function BrevoEmailTab() {
+  const { configs, upsertConfig } = useAdminConfigStore();
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+
+  const get = (key) => configs.find(c => c.key === key)?.value ?? '';
+  const enabled = get('brevo_email_enabled') === true || get('brevo_email_enabled') === 'true';
+
+  const [form, setForm] = useState({ enabled: false, apiKey: '', senderEmail: '', senderName: '' });
+
+  useEffect(() => {
+    setForm({
+      enabled: get('brevo_email_enabled') === true || get('brevo_email_enabled') === 'true',
+      apiKey: get('brevo_api_key'),
+      senderEmail: get('brevo_sender_email'),
+      senderName: get('brevo_sender_name'),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configs]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await Promise.all([
+        upsertConfig('brevo_email_enabled', {
+          key: 'brevo_email_enabled', value: form.enabled, label: 'Brevo Email Enabled',
+          category: 'email', valueType: 'boolean', isSecret: false,
+        }),
+        upsertConfig('brevo_api_key', {
+          key: 'brevo_api_key', value: form.apiKey, label: 'Brevo API Key',
+          category: 'email', valueType: 'string', isSecret: true,
+        }),
+        upsertConfig('brevo_sender_email', {
+          key: 'brevo_sender_email', value: form.senderEmail, label: 'Default Sender Email',
+          category: 'email', valueType: 'string', isSecret: false,
+        }),
+        upsertConfig('brevo_sender_name', {
+          key: 'brevo_sender_name', value: form.senderName, label: 'Default Sender Name',
+          category: 'email', valueType: 'string', isSecret: false,
+        }),
+      ]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Status banner */}
+      <div className={cn('flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-medium',
+        form.enabled
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+          : 'bg-slate-800 border-slate-700 text-slate-400'
+      )}>
+        {form.enabled
+          ? <><CheckCircle2 className="w-4 h-4" /> Brevo Email is <strong>enabled</strong> — system transactional emails will be sent.</>
+          : <><AlertCircle className="w-4 h-4" /> Brevo Email is <strong>disabled</strong> — email sending is paused.</>
+        }
+      </div>
+
+      <div className="rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-5">
+        {/* Enable toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">Enable Brevo Transactional Emails</p>
+            <p className="text-xs text-slate-400 mt-0.5">Allow the platform to send welcome emails, invoices, and password resets</p>
+          </div>
+          <button
+            onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))}
+            className={cn(
+              'relative w-12 h-6 rounded-full transition-colors duration-200',
+              form.enabled ? 'bg-emerald-500' : 'bg-slate-700'
+            )}
+          >
+            <span className={cn(
+              'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200',
+              form.enabled ? 'translate-x-6' : 'translate-x-0.5'
+            )} />
+          </button>
+        </div>
+
+        <div className="border-t border-slate-800" />
+
+        {/* API Key */}
+        <div>
+          <label className="text-xs text-slate-400 mb-1.5 block font-medium">
+            Brevo API Key (v3)
+            <span className="ml-2 text-slate-600 font-normal">(from Brevo → SMTP &amp; API)</span>
+          </label>
+          <div className="relative">
+            <input
+              type={showSecret ? 'text' : 'password'}
+              value={form.apiKey}
+              onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
+              placeholder="xkeysib-••••••••••••••••"
+              className="w-full px-3 py-2.5 pr-10 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none placeholder:text-slate-600"
+            />
+            <button
+              type="button"
+              onClick={() => setShowSecret(s => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+            >
+              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Sender Info */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-slate-400 mb-1.5 block font-medium">Global Sender Name</label>
+            <input
+              value={form.senderName}
+              onChange={e => setForm(f => ({ ...f, senderName: e.target.value }))}
+              placeholder="RestroAI Alerts"
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none placeholder:text-slate-600"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 mb-1.5 block font-medium">Global Sender Email</label>
+            <input
+              value={form.senderEmail}
+              onChange={e => setForm(f => ({ ...f, senderEmail: e.target.value }))}
+              placeholder="noreply@restroai.com"
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none placeholder:text-slate-600"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={cn(
+            'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
+            saved
+              ? 'bg-emerald-600 text-white'
+              : 'bg-[#009286] hover:bg-[#007f74] text-white',
+            saving && 'opacity-60 cursor-not-allowed'
+          )}
+        >
+          {saved ? <><CheckCircle2 className="w-4 h-4" /> Saved!</> : saving ? 'Saving…' : <><Save className="w-4 h-4" /> Save Brevo Config</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSettingsPage() {
   const { configs, activityLogs, logPagination, fetchConfigs, upsertConfig, deleteConfig, fetchActivityLogs, isLoading } = useAdminConfigStore();
   const [tab, setTab] = useState('config');
@@ -192,6 +343,7 @@ export default function AdminSettingsPage() {
         {[
           { key: 'config', icon: Settings, label: 'System Config' },
           { key: 'google', icon: Globe, label: 'Google OAuth' },
+          { key: 'brevo', icon: Mail, label: 'Brevo Email' },
           { key: 'logs', icon: ScrollText, label: 'Activity Logs' },
           { key: 'roles', icon: Shield, label: 'Roles & Access' },
         ].map(t => (
@@ -203,6 +355,9 @@ export default function AdminSettingsPage() {
 
       {/* ── Google OAuth Tab ── */}
       {tab === 'google' && <GoogleOAuthTab />}
+
+      {/* ── Brevo Email Tab ── */}
+      {tab === 'brevo' && <BrevoEmailTab />}
 
       {tab === 'config' && (
         <div className="space-y-4">
