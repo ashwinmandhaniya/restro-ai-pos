@@ -4,6 +4,7 @@ import googlepayImg from '@/assets/integrations/googlepay.png';
 import phonepeImg from '@/assets/integrations/phonepe.png';
 import upiImg from '@/assets/integrations/upi.png';
 import stripeImg from '@/assets/integrations/stripe.png';
+import cashfreeImg from '@/assets/integrations/cashfree.png';
 
 /**
  * Hand-crafted inline SVG logos for every integration platform.
@@ -424,6 +425,15 @@ export function StripeLogo({ size = 36 }) {
   return (
     <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 8 }}>
       <img src={stripeImg} alt="Stripe" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+    </div>
+  );
+}
+
+// Cashfree — Official high-fidelity logo
+export function CashfreeLogo({ size = 36 }) {
+  return (
+    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 8 }}>
+      <img src={cashfreeImg} alt="Cashfree" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
     </div>
   );
 }

@@ -31,6 +31,7 @@ const IntegrationsPage = lazy(() => import('./pages/tenant/IntegrationsPage'));
 const TouchScreenPOSPage = lazy(() => import('./pages/TouchScreenPOSPage'));
 const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'));
 const WaiterManagementPage = lazy(() => import('./pages/WaiterManagementPage'));
+const WaiterDisplayPage = lazy(() => import('./pages/WaiterDisplayPage'));
 const PrinterManagementPage = lazy(() => import('./pages/PrinterManagementPage'));
 import MenuSyncPage from './pages/MenuSyncPage';
 const InventoryTransferPage = lazy(() => import('./pages/tenant/InventoryTransferPage'));
@@ -174,6 +175,7 @@ function App() {
           <Route path="customers" element={<PermissionRoute permission="customers.manage"><CustomersPage /></PermissionRoute>} />
           <Route path="loyalty" element={<PermissionRoute permission="customers.manage"><Suspense fallback={<AdminLoader />}><CustomerLoyaltyPage /></Suspense></PermissionRoute>} />
           <Route path="waiter-management" element={<PermissionRoute permission="staff.manage"><Suspense fallback={<AdminLoader />}><WaiterManagementPage /></Suspense></PermissionRoute>} />
+          <Route path="waiter-display" element={<PermissionRoute permission="staff.manage"><Suspense fallback={<AdminLoader />}><WaiterDisplayPage /></Suspense></PermissionRoute>} />
           <Route path="settings/printers" element={<PermissionRoute permission="settings.manage"><Suspense fallback={<AdminLoader />}><PrinterManagementPage /></Suspense></PermissionRoute>} />
           <Route path="ai-insights" element={<PermissionRoute permission="ai.insights"><AIInsightsPage /></PermissionRoute>} />
           <Route path="reports" element={<PermissionRoute permission="reports.view"><ReportsPage /></PermissionRoute>} />

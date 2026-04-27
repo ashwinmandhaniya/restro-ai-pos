@@ -22,6 +22,7 @@ const navItems = [
   { path: '/kitchen', label: 'Kitchen Display', icon: ChefHat, permission: 'kitchen.display' },
   { path: '/chef-management', label: 'Chef Management', icon: Users, permission: 'kitchen.display' },
   { path: '/waiter-management', label: 'Waiter Management', icon: UserCheck, permission: 'settings.manage' },
+  { path: '/waiter-display', label: 'Waiter Display', icon: Monitor, permission: 'settings.manage' },
   { path: '/tokens', label: 'Token Management', icon: Ticket, permission: 'tokens.manage' },
   { path: '/order-history', label: 'Order History', icon: History, permission: 'orders.view' },
   { path: '/qr-codes', label: 'QR Codes', icon: QrCode, permission: 'menu.manage' },

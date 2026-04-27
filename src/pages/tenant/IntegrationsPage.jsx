@@ -15,7 +15,7 @@ import {
   OndcLogo,
   LoyaltyLogo, BingageLogo, ReeloLogo, MloyalLogo, KringleLogo, EwardsLogo, FroogalLogo, UengagePrismLogo,
   TallyLogo,
-  RazorpayLogo, PaytmLogo, GooglePayLogo, PhonePeLogo, UpiLogo, StripeLogo,
+  RazorpayLogo, PaytmLogo, GooglePayLogo, PhonePeLogo, UpiLogo, StripeLogo, CashfreeLogo,
 } from './integration-logos.jsx';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -624,6 +624,24 @@ const PLATFORMS = [
     logo: 'St',
     domain: 'stripe.com',
     LogoComponent: StripeLogo,
+  },
+  {
+    id: 'cashfree',
+    name: 'Cashfree',
+    category: 'Payment Gateway',
+    description: 'Accept UPI, Cards, Net Banking, and Wallets with Cashfree Payments — fast settlements & robust APIs.',
+    color: '#0057FF',
+    bgColor: 'bg-blue-600/10',
+    textColor: 'text-blue-400',
+    borderColor: 'border-blue-600/20',
+    fields: [
+      { key: 'appId',     label: 'App ID',     placeholder: 'CF_xxxxxxxxxxxx',       type: 'text' },
+      { key: 'secretKey', label: 'Secret Key', placeholder: 'cf_secret_xxxxxxxxxxxx', type: 'password' },
+    ],
+    docsUrl: 'https://docs.cashfree.com/docs',
+    logo: 'CF',
+    domain: 'cashfree.com',
+    LogoComponent: CashfreeLogo,
   },
 ];
 
