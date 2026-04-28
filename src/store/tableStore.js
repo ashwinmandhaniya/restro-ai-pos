@@ -38,6 +38,12 @@ const useTableStore = create((set) => ({
     }
   },
   
+  handleRealtimeTableUpdate: (updatedTable) => {
+    set((state) => ({
+      tables: state.tables.map(table => table._id === updatedTable._id ? updatedTable : table)
+    }));
+  },
+  
   deleteTable: async (id) => {
     try {
       await api.delete(`/tables/${id}`);

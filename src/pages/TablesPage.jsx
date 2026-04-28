@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Clock, IndianRupee, AlertCircle, Plus, RotateCcw, QrCode, Merge, X, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import useTableStore from '@/store/tableStore'
 import useCartStore from '@/store/cartStore'
+import useOrderStore from '@/store/orderStore'
 import { formatCurrency, cn } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
 
@@ -32,7 +34,9 @@ export default function TablesPage() {
   const [customFloors, setCustomFloors] = useState(() => JSON.parse(localStorage.getItem('tenantCustomFloors') || '[]'))
 
   const { tables, fetchTables, createTable, updateTable, deleteTable, isLoading } = useTableStore()
-  const { confirmAction, addNotification } = useUIStore()
+  const { orders, fetchOrders } = useOrderStore()
+  const { confirmAction, addNotification, setShowPaymentModal } = useUIStore()
+  const navigate = useNavigate()
 
   // Compute combined floors
   const activeFloorSet = new Set(tables.map(t => t.floor))
@@ -42,7 +46,26 @@ export default function TablesPage() {
 
   useEffect(() => {
     fetchTables()
-  }, [fetchTables])
+    fetchOrders('active')
+  }, [fetchTables, fetchOrders])
+
+  const handleLoadOrder = (tableId, action) => {
+    const order = orders.find(o => 
+      (o.tableId?._id === tableId || o.tableId === tableId) && 
+      o.status !== 'completed' && 
+      o.status !== 'cancelled'
+    );
+    
+    if (order) {
+      useCartStore.getState().loadOrderFromDB(order);
+      if (action === 'bill') {
+        setShowPaymentModal(true);
+      }
+      navigate('/pos');
+    } else {
+      addNotification({ type: 'error', title: 'Order not found', message: 'No active order found for this table.' });
+    }
+  }
 
   const floorTables = tables.filter(t => t.floor === selectedFloor)
   const filteredTables = filterStatus === 'all' 
@@ -285,7 +308,6 @@ export default function TablesPage() {
                 <p className="text-xs opacity-70">{table.capacity} seats</p>
               </div>
 
-              {/* Table info */}
               {table.status === 'occupied' && (
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center gap-1">
@@ -294,7 +316,7 @@ export default function TablesPage() {
                   </div>
                   <div className="flex items-center gap-1 font-bold font-mono">
                     <IndianRupee className="w-3 h-3" />
-                    <span>{formatCurrency(table.amount || 0)}</span>
+                    <span>{formatCurrency(orders.find(o => (o.tableId?._id === table._id || o.tableId === table._id) && o.status !== 'completed' && o.status !== 'cancelled')?.total || table.amount || 0)}</span>
                   </div>
                 </div>
               )}
@@ -307,7 +329,7 @@ export default function TablesPage() {
 
               {table.status === 'billing' && (
                 <div className="space-y-1 text-xs">
-                  <p className="font-semibold font-mono">{formatCurrency(table.amount || 0)}</p>
+                  <p className="font-semibold font-mono">{formatCurrency(orders.find(o => (o.tableId?._id === table._id || o.tableId === table._id) && o.status !== 'completed' && o.status !== 'cancelled')?.total || table.amount || 0)}</p>
                 </div>
               )}
 
@@ -341,7 +363,7 @@ export default function TablesPage() {
                   onClick={() => {
                     useCartStore.getState().setTable(selectedTable);
                     useCartStore.getState().setOrderType('dine-in');
-                    window.location.href = '/pos';
+                    navigate('/pos');
                   }}
                   className="btn-primary btn-sm"
                 >
@@ -350,12 +372,12 @@ export default function TablesPage() {
               )}
               {selectedTable.status === 'occupied' && (
                 <>
-                  <button className="btn-secondary btn-sm">View Order</button>
-                  <button className="btn-primary btn-sm">Generate Bill</button>
+                  <button onClick={() => handleLoadOrder(selectedTable._id, 'view')} className="btn-secondary btn-sm">View Order</button>
+                  <button onClick={() => handleLoadOrder(selectedTable._id, 'bill')} className="btn-primary btn-sm">Generate Bill</button>
                 </>
               )}
               {selectedTable.status === 'billing' && (
-                <button className="btn-success btn-sm">Complete Payment</button>
+                <button onClick={() => handleLoadOrder(selectedTable._id, 'bill')} className="btn-success btn-sm">Complete Payment</button>
               )}
               <button onClick={() => {
                 setEditingTableId(selectedTable._id);

@@ -6,6 +6,7 @@ import Header from './Header'
 import useUIStore from '@/store/uiStore'
 import useAuthStore from '@/store/authStore'
 import useOrderStore from '@/store/orderStore'
+import useTableStore from '@/store/tableStore'
 import VoiceBilling from '@/components/ai/VoiceBilling'
 import OwnerCopilot from '@/components/ai/OwnerCopilot'
 import NotificationToast from '@/components/ui/NotificationToast'
@@ -64,6 +65,15 @@ export default function AppLayout() {
           title: 'KOT Update', 
           message: `Order ${data.orderId?.toString().slice(-6).toUpperCase()} → ${data.status}` 
         });
+      });
+
+      socketClient.on('table_updated', (table) => {
+        useTableStore.getState().handleRealtimeTableUpdate(table);
+      });
+      
+      socketClient.on('order_updated', (order) => {
+        // Wait, useOrderStore might not have handleRealtimeOrderUpdate, let's just refresh orders
+        useOrderStore.getState().fetchOrders('active');
       });
     }
 
