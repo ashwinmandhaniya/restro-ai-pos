@@ -31,6 +31,7 @@ const IntegrationsPage = lazy(() => import('./pages/tenant/IntegrationsPage'));
 const TouchScreenPOSPage = lazy(() => import('./pages/TouchScreenPOSPage'));
 const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'));
 const WaiterManagementPage = lazy(() => import('./pages/WaiterManagementPage'));
+const StaffManagementPage = lazy(() => import('./pages/StaffManagementPage'));
 const WaiterDisplayPage = lazy(() => import('./pages/WaiterDisplayPage'));
 const PrinterManagementPage = lazy(() => import('./pages/PrinterManagementPage'));
 import MenuSyncPage from './pages/MenuSyncPage';
@@ -42,6 +43,7 @@ const CrashPreventionPage = lazy(() => import('./pages/CrashPreventionPage'));
 const WasteManagementPage = lazy(() => import('./pages/WasteManagementPage'));
 const RecipeManagementPage = lazy(() => import('./pages/RecipeManagementPage'));
 const OrderAlertPage = lazy(() => import('./pages/OrderAlertPage'));
+const MultiCounterPage = lazy(() => import('./pages/MultiCounterPage'));
 
 // Admin Pages (lazy loaded for bundle splitting)
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -176,6 +178,7 @@ function App() {
           <Route path="loyalty" element={<PermissionRoute permission="customers.manage"><Suspense fallback={<AdminLoader />}><CustomerLoyaltyPage /></Suspense></PermissionRoute>} />
           <Route path="waiter-management" element={<PermissionRoute permission="staff.manage"><Suspense fallback={<AdminLoader />}><WaiterManagementPage /></Suspense></PermissionRoute>} />
           <Route path="waiter-display" element={<PermissionRoute permission="staff.manage"><Suspense fallback={<AdminLoader />}><WaiterDisplayPage /></Suspense></PermissionRoute>} />
+          <Route path="staff" element={<PermissionRoute permission="settings.manage"><Suspense fallback={<AdminLoader />}><StaffManagementPage /></Suspense></PermissionRoute>} />
           <Route path="settings/printers" element={<PermissionRoute permission="settings.manage"><Suspense fallback={<AdminLoader />}><PrinterManagementPage /></Suspense></PermissionRoute>} />
           <Route path="ai-insights" element={<PermissionRoute permission="ai.insights"><AIInsightsPage /></PermissionRoute>} />
           <Route path="reports" element={<PermissionRoute permission="reports.view"><ReportsPage /></PermissionRoute>} />
@@ -183,6 +186,7 @@ function App() {
           <Route path="waste-management" element={<PermissionRoute permission="inventory.manage"><Suspense fallback={<AdminLoader />}><WasteManagementPage /></Suspense></PermissionRoute>} />
           <Route path="recipe-management" element={<PermissionRoute permission="menu.manage"><Suspense fallback={<AdminLoader />}><RecipeManagementPage /></Suspense></PermissionRoute>} />
           <Route path="order-alerts" element={<PermissionRoute permission="orders.view"><Suspense fallback={<AdminLoader />}><OrderAlertPage /></Suspense></PermissionRoute>} />
+          <Route path="multi-counter" element={<PermissionRoute permission="pos.billing"><Suspense fallback={<AdminLoader />}><MultiCounterPage /></Suspense></PermissionRoute>} />
           <Route path="settings" element={<PermissionRoute permission="settings.manage"><SettingsPage /></PermissionRoute>} />
           <Route path="settings/users" element={<PermissionRoute permission="settings.manage"><Suspense fallback={<AdminLoader />}><UserManagementPage /></Suspense></PermissionRoute>} />
           <Route path="settings/roles" element={<PermissionRoute permission="settings.manage"><Suspense fallback={<AdminLoader />}><RoleManagementPage /></Suspense></PermissionRoute>} />

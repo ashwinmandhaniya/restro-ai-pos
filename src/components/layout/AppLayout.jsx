@@ -12,6 +12,7 @@ import OwnerCopilot from '@/components/ai/OwnerCopilot'
 import NotificationToast from '@/components/ui/NotificationToast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import KeyboardShortcuts from '@/components/ui/KeyboardShortcuts'
+import NetworkStatus from '@/components/ui/NetworkStatus'
 import socketClient from '@/lib/socket'
 
 export default function AppLayout() {
@@ -84,6 +85,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950">
+      <NetworkStatus />
       <Sidebar />
       <main
         className="transition-all duration-200"

@@ -139,7 +139,7 @@ export default function ReservationsPage() {
   const {
     reservations, isLoading, viewMode, setViewMode,
     selectedDate, setSelectedDate, fetchReservations,
-    markSeated
+    markSeated, createReservation
   } = useReservationStore();
   const { fetchTables } = useTableStore();
   const { addNotification } = useUIStore();
@@ -160,6 +160,30 @@ export default function ReservationsPage() {
       setSelectedRes(null);
     } else {
       addNotification({ title: 'Error', message: result.error, type: 'error' });
+    }
+  };
+
+  const handleCreateBooking = async () => {
+    if (!walkInForm.name || !walkInForm.phone || !walkInForm.time) {
+      addNotification({ title: 'Missing Info', message: 'Please provide name, phone and time.', type: 'warning' });
+      return;
+    }
+    
+    const result = await createReservation({
+      customerName: walkInForm.name,
+      customerPhone: walkInForm.phone,
+      guestCount: parseInt(walkInForm.guests, 10),
+      date: selectedDate,
+      timeSlot: { start: walkInForm.time, end: 'TBD' },
+      source: 'walkin'
+    });
+
+    if (result.success) {
+      addNotification({ title: 'Success', message: 'Booking confirmed!', type: 'success' });
+      setShowAddModal(false);
+      setWalkInForm({ name: '', phone: '', guests: 2, time: '' });
+    } else {
+      addNotification({ title: 'Error', message: result.error || 'Failed to book.', type: 'error' });
     }
   };
 
@@ -423,7 +447,7 @@ export default function ReservationsPage() {
                 </div>
 
                 <button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={handleCreateBooking}
                   className="w-full mt-2 py-3 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl transition-colors shadow-lg shadow-primary-600/20"
                 >
                   Confirm Booking

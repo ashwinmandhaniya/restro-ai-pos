@@ -130,11 +130,26 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // On network error, return stale cached data if available
+    // On network error, return stale cached data if available (GET)
     if (!error.response && originalRequest?.method === 'get') {
       const cached = clientCache.get(originalRequest.url);
       if (cached) {
         return { data: cached.data, status: 200, statusText: 'OK (stale)', config: originalRequest };
+      }
+    }
+
+    // Offline Sync: Queue mutation requests that fail due to network errors
+    if (!error.response && originalRequest && !originalRequest._skipOfflineQueue) {
+      const { default: offlineSync } = await import('./offlineSync.js');
+      if (offlineSync.shouldQueue(originalRequest)) {
+        await offlineSync.enqueue(originalRequest);
+        // Return a synthetic success so the UI doesn't error out
+        return {
+          data: { success: true, _offline: true, message: 'Saved offline — will sync when connection restores' },
+          status: 202,
+          statusText: 'Accepted (offline)',
+          config: originalRequest
+        };
       }
     }
 

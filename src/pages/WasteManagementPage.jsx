@@ -1,39 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trash2, Plus, Search, AlertTriangle, TrendingDown, Package,
   BarChart3, RefreshCw, X, Filter, Leaf, Flame, Droplets,
-  ArrowDown, DollarSign, CheckCircle2, ChevronRight, Clock
+  ArrowDown, IndianRupee, CheckCircle2, ChevronRight, Clock,
+  Brain, ShieldAlert, Activity, Zap, ThermometerSun
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
+import api from '@/lib/api'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts'
-
-// ---- Mock Data ----
-const WASTE_LOGS = [
-  { id: 1, item: 'Tomatoes', category: 'Vegetables', qty: 3.5, unit: 'kg', reason: 'Spoilage', cost: 105, date: '2026-04-26', stage: 'Storage', icon: '🍅' },
-  { id: 2, item: 'Paneer', category: 'Dairy', qty: 1.2, unit: 'kg', reason: 'Over-prepared', cost: 312, date: '2026-04-26', stage: 'Kitchen', icon: '🧀' },
-  { id: 3, item: 'Rice', category: 'Grains', qty: 5, unit: 'kg', reason: 'Over-cooked', cost: 150, date: '2026-04-25', stage: 'Kitchen', icon: '🍚' },
-  { id: 4, item: 'Chicken', category: 'Meat', qty: 0.8, unit: 'kg', reason: 'Order cancelled', cost: 240, date: '2026-04-25', stage: 'Service', icon: '🍗' },
-  { id: 5, item: 'Bread', category: 'Bakery', qty: 12, unit: 'pcs', reason: 'Expired', cost: 60, date: '2026-04-24', stage: 'Storage', icon: '🍞' },
-  { id: 6, item: 'Daal', category: 'Pulses', qty: 2, unit: 'kg', reason: 'Over-prepared', cost: 80, date: '2026-04-24', stage: 'Kitchen', icon: '🫘' },
-  { id: 7, item: 'Milk', category: 'Dairy', qty: 4, unit: 'ltr', reason: 'Spoilage', cost: 200, date: '2026-04-23', stage: 'Storage', icon: '🥛' },
-  { id: 8, item: 'Naan', category: 'Bakery', qty: 20, unit: 'pcs', reason: 'Plate return', cost: 100, date: '2026-04-23', stage: 'Service', icon: '🫓' },
-]
-
-const WEEKLY_WASTE = [
-  { day: 'Mon', kg: 4.2, cost: 380 },
-  { day: 'Tue', kg: 2.8, cost: 210 },
-  { day: 'Wed', kg: 6.1, cost: 520 },
-  { day: 'Thu', kg: 3.5, cost: 295 },
-  { day: 'Fri', kg: 8.2, cost: 710 },
-  { day: 'Sat', kg: 5.4, cost: 480 },
-  { day: 'Sun', kg: 3.9, cost: 330 },
-]
 
 const CATEGORY_COLORS = {
   Vegetables: '#10b981',
@@ -53,12 +33,38 @@ const EMPTY_FORM = { item: '', category: '', qty: '', unit: 'kg', reason: '', st
 
 export default function WasteManagementPage() {
   const { addNotification } = useUIStore()
-  const [logs, setLogs] = useState(WASTE_LOGS)
+  const [logs, setLogs] = useState([])
+  const [weeklyWaste, setWeeklyWaste] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterStage, setFilterStage] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
-  const [activeTab, setActiveTab] = useState('log') // 'log' | 'analytics'
+  const [activeTab, setActiveTab] = useState('log') // 'log' | 'analytics' | 'ai'
+  const [insights, setInsights] = useState(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
+
+  useEffect(() => {
+    fetchWasteData()
+    fetchInsights()
+  }, [])
+
+  const fetchWasteData = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/tenant/waste')
+      if (res.data.success) {
+        setLogs(res.data.data.logs)
+        // Reverse weeklyWaste so it reads Monday->Sunday or oldest->newest
+        setWeeklyWaste(res.data.data.weeklyWaste.reverse())
+      }
+    } catch (error) {
+      console.error('Failed to fetch waste data', error)
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to load waste records' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Derived stats
   const totalCost = useMemo(() => logs.reduce((s, l) => s + l.cost, 0), [logs])
@@ -83,33 +89,60 @@ export default function WasteManagementPage() {
     return matchSearch && matchStage
   })
 
-  const handleLog = (e) => {
+  const handleLog = async (e) => {
     e.preventDefault()
-    const entry = {
-      id: Date.now(),
-      ...form,
-      qty: parseFloat(form.qty),
-      cost: parseFloat(form.cost),
-      date: new Date().toISOString().split('T')[0],
-      icon: '📦'
+    try {
+      const payload = {
+        ...form,
+        qty: parseFloat(form.qty),
+        cost: parseFloat(form.cost),
+        date: new Date().toISOString().split('T')[0],
+        icon: '📦'
+      }
+      
+      const res = await api.post('/tenant/waste', payload)
+      
+      if (res.data?.success || res.data?._offline) {
+        setForm(EMPTY_FORM)
+        setShowModal(false)
+        if (res.data?._offline) {
+           addNotification({ type: 'warning', title: 'Offline Mode', message: res.data.message })
+           // Optimistic UI update for offline mode
+           const offlineEntry = { ...payload, _id: `offline-${Date.now()}` }
+           setLogs([offlineEntry, ...logs])
+        } else {
+           setLogs([res.data.data, ...logs])
+           addNotification({ type: 'success', title: 'Waste Logged', message: `${form.item} has been recorded in the waste log.` })
+           fetchWasteData() // Refresh analytics
+        }
+      }
+    } catch (error) {
+      addNotification({ type: 'error', title: 'Error', message: error.response?.data?.message || 'Failed to log waste' })
     }
-    setLogs([entry, ...logs])
-    setForm(EMPTY_FORM)
-    setShowModal(false)
-    addNotification({ type: 'success', title: 'Waste Logged', message: `${form.item} has been recorded in the waste log.` })
   }
 
-  const handleDelete = (id) => {
-    setLogs(prev => prev.filter(l => l.id !== id))
-    addNotification({ type: 'info', title: 'Entry Removed', message: 'Waste log entry has been deleted.' })
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/tenant/waste/${id}`)
+      setLogs(prev => prev.filter(l => l._id !== id && l.id !== id))
+      addNotification({ type: 'info', title: 'Entry Removed', message: 'Waste log entry has been deleted.' })
+      fetchWasteData() // Refresh analytics
+    } catch (error) {
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to delete entry' })
+    }
   }
 
-  const RECS = [
-    { text: `Reduce ${topWasteItem} prep quantity by 15% on weekdays`, icon: TrendingDown, color: 'text-emerald-500' },
-    { text: 'Batch-cook rice in 3 smaller portions to cut over-cooking waste', icon: Flame, color: 'text-amber-500' },
-    { text: 'Set a FIFO reminder for dairy stock — milk turning daily', icon: Droplets, color: 'text-blue-500' },
-    { text: 'Enable low-demand alerts on Friday to prevent over-ordering bread', icon: AlertTriangle, color: 'text-red-500' },
-  ]
+  const fetchInsights = async () => {
+    setInsightsLoading(true)
+    try {
+      const res = await api.get('/tenant/waste/insights')
+      if (res.data.success) setInsights(res.data.data)
+    } catch (e) {
+      addNotification({ type: 'error', title: 'Error', message: 'Failed to load AI insights' })
+    } finally {
+      setInsightsLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -139,7 +172,7 @@ export default function WasteManagementPage() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
-          { label: 'Total Waste Cost', value: formatCurrency(totalCost), sub: 'all time', icon: DollarSign, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-500/20' },
+          { label: 'Total Waste Cost', value: formatCurrency(totalCost), sub: 'all time', icon: IndianRupee, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-500/20' },
           { label: 'Weight Wasted', value: `${totalKg} kg`, sub: 'approx.', icon: Package, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-500/20' },
           { label: 'Top Waste Item', value: topWasteItem, sub: 'by cost', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-500/20' },
           { label: 'Entries Logged', value: logs.length, sub: 'events', icon: BarChart3, color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-500/20' },
@@ -159,8 +192,8 @@ export default function WasteManagementPage() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
-        {[['log', 'Waste Log'], ['analytics', 'Analytics']].map(([tab, label]) => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
+        {[['log', 'Waste Log'], ['analytics', 'Analytics'], ['ai', '🧠 AI Brain']].map(([tab, label]) => (
+          <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'ai' && !insights) fetchInsights() }}
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-semibold transition-all',
               activeTab === tab
@@ -213,8 +246,15 @@ export default function WasteManagementPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                     <AnimatePresence>
-                      {filtered.map((log, i) => (
-                        <motion.tr key={log.id}
+                      {loading && logs.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="text-center py-8">
+                            <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-slate-500 text-sm">Loading logs...</p>
+                          </td>
+                        </tr>
+                      ) : filtered.map((log, i) => (
+                        <motion.tr key={log._id || log.id}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
@@ -248,7 +288,7 @@ export default function WasteManagementPage() {
                             <Clock className="w-3 h-3" />{log.date}
                           </td>
                           <td className="px-4 py-3">
-                            <button onClick={() => handleDelete(log.id)}
+                            <button onClick={() => handleDelete(log._id || log.id)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all">
                               <X className="w-4 h-4" />
                             </button>
@@ -267,7 +307,7 @@ export default function WasteManagementPage() {
               </div>
             </div>
           </motion.div>
-        ) : (
+        ) : activeTab === 'analytics' ? (
           <motion.div key="analytics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Weekly bar chart */}
@@ -276,7 +316,7 @@ export default function WasteManagementPage() {
                 <p className="text-xs text-slate-500 mb-5">Estimated cost of waste per day this week</p>
                 <div className="h-52">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={WEEKLY_WASTE} barSize={22}>
+                    <BarChart data={weeklyWaste} barSize={22}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.08} />
                       <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                       <YAxis hide />
@@ -321,7 +361,7 @@ export default function WasteManagementPage() {
               </div>
             </div>
 
-            {/* AI Recommendations */}
+            {/* AI Recommendations — now from live data */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -333,17 +373,200 @@ export default function WasteManagementPage() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {RECS.map((rec, i) => (
+                {(insights?.recommendations || []).slice(0, 4).map((rec, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                    className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <rec.icon className={cn('w-4 h-4 mt-0.5 flex-shrink-0', rec.color)} />
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{rec.text}</p>
+                    className={cn('flex items-start gap-3 p-3 rounded-xl border',
+                      rec.type === 'danger' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20' :
+                      rec.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-500/20' :
+                      rec.type === 'success' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-500/20' :
+                      'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
+                    )}>
+                    {rec.type === 'danger' ? <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" /> :
+                     rec.type === 'warning' ? <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" /> :
+                     rec.type === 'success' ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" /> :
+                     <Zap className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />}
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">{rec.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{rec.message}</p>
+                    </div>
                   </motion.div>
                 ))}
+                {!insights && (
+                  <p className="text-sm text-slate-400 col-span-2 text-center py-4">Loading AI insights...</p>
+                )}
               </div>
             </div>
           </motion.div>
-        )}
+        ) : activeTab === 'ai' ? (
+          <motion.div key="ai" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+            {insightsLoading ? (
+              <div className="flex items-center justify-center h-40">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : insights ? (
+              <>
+                {/* Risk Score + Summary Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Risk Gauge */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col items-center">
+                    <Brain className="w-8 h-8 text-violet-500 mb-2" />
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Waste Risk Score</p>
+                    <div className="relative w-28 h-28">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-slate-100 dark:text-slate-800" />
+                        <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(insights.riskScore / 100) * 264} 264`}
+                          className={insights.riskScore > 60 ? 'text-red-500' : insights.riskScore > 35 ? 'text-amber-500' : 'text-emerald-500'} />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={cn('text-3xl font-black', insights.riskScore > 60 ? 'text-red-500' : insights.riskScore > 35 ? 'text-amber-500' : 'text-emerald-500')}>
+                          {insights.riskScore}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-semibold">/100</span>
+                      </div>
+                    </div>
+                    <p className={cn('text-xs font-bold mt-2', insights.riskScore > 60 ? 'text-red-500' : insights.riskScore > 35 ? 'text-amber-500' : 'text-emerald-500')}>
+                      {insights.riskScore > 60 ? 'HIGH RISK' : insights.riskScore > 35 ? 'MODERATE' : 'LOW RISK'}
+                    </p>
+                  </div>
+
+                  {/* Trend Card */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Activity className={cn('w-5 h-5', insights.summary.trend === 'rising' ? 'text-red-500' : insights.summary.trend === 'falling' ? 'text-emerald-500' : 'text-amber-500')} />
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">Week-over-Week Trend</p>
+                    </div>
+                    <p className={cn('text-4xl font-black', insights.summary.trendPct > 0 ? 'text-red-500' : insights.summary.trendPct < 0 ? 'text-emerald-500' : 'text-slate-600')}>
+                      {insights.summary.trendPct > 0 ? '+' : ''}{insights.summary.trendPct}%
+                    </p>
+                    <div className="mt-3 space-y-1 text-xs text-slate-500">
+                      <p>This week: <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(insights.summary.thisWeekCost)}</span></p>
+                      <p>Last week: <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(insights.summary.lastWeekCost)}</span></p>
+                      <p>Avg daily: <span className="font-bold text-slate-800 dark:text-white">{formatCurrency(insights.summary.avgDailyCost)}</span></p>
+                    </div>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                    <p className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                      <ThermometerSun className="w-4 h-4 text-orange-500" /> 30-Day Summary
+                    </p>
+                    <div className="space-y-3">
+                      {[
+                        { l: 'Total Cost', v: formatCurrency(insights.summary.totalCost) },
+                        { l: 'Total Weight', v: `${insights.summary.totalQty} kg` },
+                        { l: 'Entries', v: insights.summary.totalEntries },
+                        { l: 'Days Analyzed', v: insights.summary.daysAnalyzed },
+                      ].map(s => (
+                        <div key={s.l} className="flex justify-between items-center">
+                          <span className="text-xs text-slate-500">{s.l}</span>
+                          <span className="text-sm font-bold text-slate-800 dark:text-white font-mono">{s.v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Waste Items + Stage Analysis */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                      <TrendingDown className="w-4 h-4 text-red-500" /> Top Waste Items (by cost)
+                    </h3>
+                    <div className="space-y-2">
+                      {(insights.topWasteItems || []).slice(0, 6).map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-mono text-slate-400 w-4">{i + 1}.</span>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-semibold text-slate-800 dark:text-white">{item.item}</span>
+                              <span className="text-xs font-bold text-red-500">{formatCurrency(item.totalCost)}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-red-400 rounded-full" style={{ width: `${Math.min(100, (item.totalCost / (insights.topWasteItems[0]?.totalCost || 1)) * 100)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-amber-500" /> Waste by Stage
+                    </h3>
+                    <div className="space-y-3">
+                      {(insights.stageAnalysis || []).map((s, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={cn('text-xs font-bold px-2 py-0.5 rounded-lg',
+                              s.stage === 'Storage' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600' :
+                              s.stage === 'Kitchen' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600' :
+                              'bg-violet-100 dark:bg-violet-500/20 text-violet-600'
+                            )}>{s.stage}</span>
+                            <span className="text-xs text-slate-500">{s.pct}% · {formatCurrency(s.totalCost)}</span>
+                          </div>
+                          <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className={cn('h-full rounded-full',
+                              s.stage === 'Storage' ? 'bg-blue-400' : s.stage === 'Kitchen' ? 'bg-amber-400' : 'bg-violet-400'
+                            )} style={{ width: `${s.pct}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white mt-5 mb-3 flex items-center gap-2">
+                      <Droplets className="w-4 h-4 text-blue-500" /> Top Waste Reasons
+                    </h3>
+                    <div className="space-y-1.5">
+                      {(insights.reasonAnalysis || []).slice(0, 5).map((r, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-slate-600 dark:text-slate-400">{r.reason}</span>
+                          <span className="font-bold text-slate-800 dark:text-white">{r.count}× · {formatCurrency(r.totalCost)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Recommendations */}
+                <div className="bg-gradient-to-br from-violet-50 to-emerald-50 dark:from-violet-900/10 dark:to-emerald-900/10 rounded-2xl border border-violet-200 dark:border-violet-500/20 p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-violet-600" />
+                    <h3 className="text-base font-bold text-slate-800 dark:text-white">AI Recommendations</h3>
+                    <span className="text-[10px] px-2 py-0.5 bg-violet-200 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400 rounded-full font-bold">
+                      {insights.recommendations?.length || 0} insights
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(insights.recommendations || []).map((rec, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                        className={cn('flex items-start gap-3 p-4 rounded-xl border bg-white/80 dark:bg-slate-900/80 backdrop-blur',
+                          rec.type === 'danger' ? 'border-red-200 dark:border-red-500/20' :
+                          rec.type === 'warning' ? 'border-amber-200 dark:border-amber-500/20' :
+                          rec.type === 'success' ? 'border-green-200 dark:border-green-500/20' :
+                          'border-slate-200 dark:border-slate-700'
+                        )}>
+                        {rec.type === 'danger' ? <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-500" /> :
+                         rec.type === 'warning' ? <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" /> :
+                         rec.type === 'success' ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-500" /> :
+                         <Zap className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />}
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 dark:text-white">{rec.title}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{rec.message}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-slate-400">
+                <Brain className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No insights available yet. Log waste entries to unlock AI analysis.</p>
+              </div>
+            )}
+          </motion.div>
+        ) : null}
       </AnimatePresence>
 
       {/* Log Waste Modal */}

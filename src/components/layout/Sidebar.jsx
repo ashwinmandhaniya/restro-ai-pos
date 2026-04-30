@@ -5,7 +5,7 @@ import {
   ClipboardList, Package, Users, Brain, BarChart3, Settings, Shield,
   ChevronLeft, ChevronRight, Sparkles, Mic, MessageSquareText,
   X, ChefHat, History, QrCode, CalendarCheck, Store, RefreshCw, Ticket, Plug, Monitor, Trophy, UserCheck, Printer,
-  ShieldCheck, Leaf, BookOpen, BellRing
+  ShieldCheck, Leaf, BookOpen, BellRing, UsersRound
 } from 'lucide-react'
 import useUIStore from '@/store/uiStore'
 import useOutletStore from '@/store/outletStore'
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
   { path: '/pos', label: 'POS Billing', icon: ShoppingCart, highlight: true, permission: 'pos.billing' },
   { path: '/touch-pos', label: 'Touch Screen POS', icon: Monitor, permission: 'pos.billing' },
+  { path: '/multi-counter', label: 'Multi Counter', icon: LayoutDashboard, permission: 'pos.billing' },
   { path: '/tables', label: 'Tables', icon: TableProperties, permission: 'tables.manage' },
   { path: '/reservations', label: 'Reservations', icon: CalendarCheck, permission: 'reservations.manage' },
   { path: '/orders', label: 'Orders (POS)', icon: ClipboardList, permission: 'orders.view' },
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/chef-management', label: 'Chef Management', icon: Users, permission: 'kitchen.display' },
   { path: '/waiter-management', label: 'Waiter Management', icon: UserCheck, permission: 'settings.manage' },
   { path: '/waiter-display', label: 'Waiter Display', icon: Monitor, permission: 'settings.manage' },
+  { path: '/staff', label: 'Staff Management', icon: UsersRound, permission: 'settings.manage', highlight: true },
   { path: '/tokens', label: 'Token Management', icon: Ticket, permission: 'tokens.manage' },
   { path: '/order-history', label: 'Order History', icon: History, permission: 'orders.view' },
   { path: '/qr-codes', label: 'QR Codes', icon: QrCode, permission: 'menu.manage' },

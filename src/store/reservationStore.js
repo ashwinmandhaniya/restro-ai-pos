@@ -30,7 +30,7 @@ const useReservationStore = create((set, get) => ({
   createReservation: async (data) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await api.post('/public/reservations/book', data)
+      const response = await api.post('/tenant/reservations', data)
       // Fetch again to update the list, or optimistically add
       get().fetchReservations(get().selectedDate)
       return { success: true, data: response.data.data }
