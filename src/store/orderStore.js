@@ -38,6 +38,18 @@ const useOrderStore = create((set, get) => ({
     }
   },
 
+  deleteOrder: async (id) => {
+    try {
+      await api.delete(`/orders/${id}`);
+      set((state) => ({
+        orders: state.orders.filter(order => order._id !== id)
+      }));
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  },
+
   updateOrderStatus: async (orderId, itemId, status) => {
     try {
       const res = await api.patch(`/orders/${orderId}/items/${itemId}/status`, { status });

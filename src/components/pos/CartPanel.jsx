@@ -15,7 +15,7 @@ export default function CartPanel() {
     holdOrder, recallOrder, clearCart, setTable
   } = useCartStore()
   const { tables, fetchTables } = useTableStore()
-  const { setShowPaymentModal, setShowKOTPreview, addNotification } = useUIStore()
+  const { setShowPaymentModal, setShowKOTPreview, addNotification, confirmAction } = useUIStore()
   const [showDiscount, setShowDiscount] = useState(false)
   const [showHeldOrders, setShowHeldOrders] = useState(false)
   const [showDueOrders, setShowDueOrders] = useState(false)
@@ -24,6 +24,7 @@ export default function CartPanel() {
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showTableModal, setShowTableModal] = useState(false)
   const [customerForm, setCustomerForm] = useState({ name: '', phone: '' })
+  const [selectedDueOrders, setSelectedDueOrders] = useState([])
 
   const { orders, fetchOrders } = useOrderStore()
 
@@ -46,6 +47,44 @@ export default function CartPanel() {
     setDiscount({ type: discountType, value })
     setShowDiscount(false)
     addNotification({ type: 'success', title: 'Discount Applied', message: discountType === 'percentage' ? `${value}% off` : `₹${value} off` })
+  }
+
+  const handleDeleteDueOrder = async (orderId) => {
+    const isConfirmed = await confirmAction({
+      title: 'Delete Order',
+      message: 'Are you sure you want to completely delete this order? This action cannot be undone and will free the associated table.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    })
+
+    if (isConfirmed) {
+      try {
+        await useOrderStore.getState().deleteOrder(orderId)
+        addNotification({ type: 'success', title: 'Order Deleted', message: 'The order has been removed.' })
+        setSelectedDueOrders(prev => prev.filter(id => id !== orderId))
+      } catch (error) {
+        addNotification({ type: 'error', title: 'Delete Failed', message: error.message || 'Could not delete order.' })
+      }
+    }
+  }
+
+  const handleBulkDeleteDueOrders = async () => {
+    const isConfirmed = await confirmAction({
+      title: 'Delete Selected Orders',
+      message: `Are you sure you want to completely delete ${selectedDueOrders.length} order(s)? This action cannot be undone and will free the associated tables.`,
+      confirmText: 'Delete All',
+      cancelText: 'Cancel'
+    })
+
+    if (isConfirmed) {
+      try {
+        await Promise.all(selectedDueOrders.map(id => useOrderStore.getState().deleteOrder(id)))
+        addNotification({ type: 'success', title: 'Orders Deleted', message: `Successfully removed ${selectedDueOrders.length} orders.` })
+        setSelectedDueOrders([])
+      } catch (error) {
+        addNotification({ type: 'error', title: 'Delete Failed', message: error.message || 'Could not delete some orders.' })
+      }
+    }
   }
 
   const handleHoldOrder = () => {
@@ -136,17 +175,45 @@ export default function CartPanel() {
             className="overflow-hidden border-b border-surface-100 dark:border-surface-800"
           >
             <div className="p-3 space-y-2 bg-primary-50 dark:bg-primary-900/10">
-              <p className="text-xs font-semibold text-primary-700 dark:text-primary-400">Orders Ready for Billing</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-primary-700 dark:text-primary-400">Orders Ready for Billing</p>
+                {selectedDueOrders.length > 0 && (
+                  <button onClick={handleBulkDeleteDueOrders} className="text-xs text-red-500 font-semibold hover:text-red-600 flex items-center gap-1">
+                    <Trash2 className="w-3 h-3" />
+                    Delete ({selectedDueOrders.length})
+                  </button>
+                )}
+              </div>
               {dueOrders.map((order) => (
-                <div key={order._id} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-surface-800 shadow-sm border border-primary-100 dark:border-primary-900/30">
-                  <div className="min-w-0 flex-1 pr-2">
-                    <p className="text-xs font-bold text-surface-900 dark:text-white truncate">#{order.orderId || order._id.slice(-6).toUpperCase()}</p>
-                    <p className="text-[10px] text-surface-500 uppercase tracking-tighter">
-                      {order.type} • {order.tableId?.name ? `Table ${order.tableId.name}` : order.tableId || 'No Table'}
-                    </p>
+                <div key={order._id} className={cn("flex items-center justify-between p-2 rounded-lg bg-white dark:bg-surface-800 shadow-sm border transition-all cursor-pointer", selectedDueOrders.includes(order._id) ? "border-primary-500 ring-1 ring-primary-500" : "border-primary-100 dark:border-primary-900/30")}
+                  onClick={() => {
+                    if (selectedDueOrders.includes(order._id)) setSelectedDueOrders(prev => prev.filter(id => id !== order._id))
+                    else setSelectedDueOrders(prev => [...prev, order._id])
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedDueOrders.includes(order._id)}
+                      onChange={() => {}} // handled by parent div
+                      className="w-4 h-4 rounded border-surface-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-xs font-bold text-surface-900 dark:text-white truncate">#{order.orderId || order._id.slice(-6).toUpperCase()}</p>
+                      <p className="text-[10px] text-surface-500 uppercase tracking-tighter">
+                        {order.type} • {order.tableId?.name ? `Table ${order.tableId.name}` : order.tableId || 'No Table'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <span className="text-xs font-bold font-mono text-primary-600">{formatCurrency(order.total)}</span>
+                    <button
+                      onClick={() => handleDeleteDueOrder(order._id)}
+                      className="p-1.5 rounded-md bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                      title="Delete Order"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                     <button
                       onClick={() => { 
                         useCartStore.getState().loadOrderFromDB(order); 
@@ -154,6 +221,7 @@ export default function CartPanel() {
                         addNotification({ type: 'info', title: 'Order Loaded', message: 'Ready for final billing' });
                       }}
                       className="p-1.5 rounded-md bg-primary-500 text-white hover:bg-primary-600 transition-all"
+                      title="Load for Billing"
                     >
                       <Play className="w-3 h-3" />
                     </button>

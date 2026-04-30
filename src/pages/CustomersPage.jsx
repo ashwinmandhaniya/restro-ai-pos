@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Search, Phone, Star, Crown, Award, Medal, Gift, MessageSquare, Plus, TrendingUp, Trash2, CheckSquare, X, Settings } from 'lucide-react'
-import { customers as mockCustomers } from '@/data/analyticsData'
 import { formatCurrency, cn, getInitials } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
 import useCustomerStore from '@/store/customerStore'
@@ -34,20 +33,11 @@ export default function CustomersPage() {
   const [category, setCategory] = useState('all')
   const { addNotification, confirmAction } = useUIStore()
   
-  const { customers: remoteCustomers, fetchCustomers } = useCustomerStore()
+  const { customers: cList, fetchCustomers, addCustomer } = useCustomerStore()
 
   useEffect(() => {
     fetchCustomers()
   }, [])
-
-  // Fallback to mock customers if DB is empty for demo purposes
-  const [cList, setCList] = useState(mockCustomers)
-
-  useEffect(() => {
-    if (remoteCustomers.length > 0) {
-      setCList(remoteCustomers)
-    }
-  }, [remoteCustomers])
 
   const [addForm, setAddForm] = useState({ name: '', phone: '', email: '' })
   const [offerForm, setOfferForm] = useState({ title: '', discount: '', message: '' })
@@ -95,24 +85,20 @@ export default function CustomersPage() {
     }
   }
 
-  const handleAddCustomer = (e) => {
+  const handleAddCustomer = async (e) => {
     e.preventDefault();
-    const newCustomer = {
-      id: Date.now().toString(),
+    const res = await addCustomer({
       name: addForm.name,
       phone: addForm.phone,
-      email: addForm.email,
-      loyalty: 'Bronze',
-      visits: 0,
-      totalSpent: 0,
-      loyaltyPoints: 0,
-      favorite: 'None',
-      lastVisit: 'Never' // Brand new!
+      email: addForm.email
+    })
+    if (res.success) {
+      setShowAddModal(false)
+      setAddForm({ name: '', phone: '', email: '' })
+      addNotification({ type: 'success', title: 'Customer Added', message: `${addForm.name} has been enrolled in the system.` })
+    } else {
+      addNotification({ type: 'error', title: 'Error', message: res.message })
     }
-    setCList([newCustomer, ...cList])
-    setShowAddModal(false)
-    setAddForm({ name: '', phone: '', email: '' })
-    addNotification({ type: 'success', title: 'Customer Added', message: `${newCustomer.name} has been enrolled in the system.` })
   }
 
   const handleSendOffer = (e) => {
@@ -144,7 +130,7 @@ export default function CustomersPage() {
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: 'Total Customers', value: cList.length, icon: Users, color: 'from-blue-500 to-blue-600' },
-          { label: 'Platinum Members', value: cList.filter(c => c.loyalty === 'Platinum').length, icon: Crown, color: 'from-slate-500 to-slate-600' },
+          { label: 'Platinum Members', value: cList.filter(c => (c.loyaltyTier || c.loyalty) === 'Platinum').length, icon: Crown, color: 'from-slate-500 to-slate-600' },
           { label: 'Total Revenue', value: formatCurrency(cList.reduce((s, c) => s + c.totalSpent, 0)), icon: TrendingUp, color: 'from-green-500 to-green-600' },
           { label: 'Avg Visit Value', value: formatCurrency(Math.round(cList.reduce((s, c) => s + c.totalSpent / Math.max(1, c.visits), 0) / Math.max(1, cList.length))), icon: Star, color: 'from-amber-500 to-amber-600' },
         ].map((stat, i) => (
@@ -218,28 +204,29 @@ export default function CustomersPage() {
       {/* Customer Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((customer, i) => {
-          const LoyaltyIcon = loyaltyIcons[customer.loyalty]
-          const loyaltyStyle = loyaltyColors[customer.loyalty]
+          const loyaltyVal = customer.loyaltyTier || customer.loyalty || 'Bronze'
+          const LoyaltyIcon = loyaltyIcons[loyaltyVal] || loyaltyIcons.Bronze
+          const loyaltyStyle = loyaltyColors[loyaltyVal] || loyaltyColors.Bronze
           return (
             <motion.div
-              key={customer.id}
+              key={customer.id || customer._id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => setSelectedCustomer(customer)}
               className={cn('card p-5 cursor-pointer hover:scale-[1.02] transition-all relative overflow-hidden group',
-                selectedItems.includes(customer.id) ? 'ring-2 ring-primary-500 bg-primary-50/10 dark:bg-primary-900/10' : '',
-                selectedCustomer?.id === customer.id && !selectedItems.includes(customer.id) && 'ring-2 ring-surface-300')}
+                selectedItems.includes(customer.id || customer._id) ? 'ring-2 ring-primary-500 bg-primary-50/10 dark:bg-primary-900/10' : '',
+                selectedCustomer?._id === customer._id && !selectedItems.includes(customer._id) && 'ring-2 ring-surface-300')}
             >
               <div 
                 className={cn('absolute top-3 right-3 z-10 transition-opacity', 
-                  selectedItems.includes(customer.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  selectedItems.includes(customer.id || customer._id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                 )}
-                onClick={(e) => handleSelect(e, customer.id)}
+                onClick={(e) => handleSelect(e, customer.id || customer._id)}
               >
                 <input 
                   type="checkbox" 
-                  checked={selectedItems.includes(customer.id)}
+                  checked={selectedItems.includes(customer.id || customer._id)}
                   readOnly
                   className="w-5 h-5 rounded border-surface-300 text-primary-500 focus:ring-primary-500 cursor-pointer shadow-sm"
                 />
@@ -257,7 +244,7 @@ export default function CustomersPage() {
                 </div>
                 <div className={cn('px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1', loyaltyStyle.bg, loyaltyStyle.text)}>
                   <LoyaltyIcon className="w-3 h-3" />
-                  {customer.loyalty}
+                  {loyaltyVal}
                 </div>
               </div>
 
