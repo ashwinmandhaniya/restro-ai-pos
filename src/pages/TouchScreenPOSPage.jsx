@@ -4,7 +4,7 @@ import {
   Search, ShoppingCart, Plus, Minus, Trash2, X, ChevronUp, ChevronDown,
   UtensilsCrossed, ShoppingBag, Truck, CreditCard, Banknote, Smartphone,
   ArrowLeft, Maximize2, Minimize2, RotateCcw, ChefHat, Sparkles,
-  Hash, User, FileText, Play
+  Hash, User, FileText, Play, Mic, Percent, Pause
 } from 'lucide-react'
 import useMenuStore from '@/store/menuStore'
 import useCartStore from '@/store/cartStore'
@@ -41,16 +41,22 @@ export default function TouchScreenPOSPage() {
   const [showTableModal, setShowTableModal] = useState(false)
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showDueOrders, setShowDueOrders] = useState(false)
+  const [showDiscount, setShowDiscount] = useState(false)
+  const [discountInput, setDiscountInput] = useState('')
+  const [discountType, setDiscountType] = useState('percentage')
+  const [showHeldOrders, setShowHeldOrders] = useState(false)
   const [customerForm, setCustomerForm] = useState({ name: '', phone: '' })
   const searchRef = useRef(null)
 
   const { categories, menuItems, isLoading, fetchMenuData } = useMenuStore()
   const {
-    items: cartItems, table, customer, addItem, removeItem, updateQuantity,
-    getSubtotal, getTotal, getTax, getItemCount, clearCart, setOrderType: setCartOrderType,
-    setTable, setCustomer, loadOrderFromDB
+    items: cartItems, table, customer, discount, heldOrders,
+    addItem, removeItem, updateQuantity,
+    getSubtotal, getTotal, getTax, getItemCount, getDiscountAmount, clearCart,
+    setOrderType: setCartOrderType, setTable, setCustomer, setDiscount,
+    loadOrderFromDB, holdOrder, recallOrder
   } = useCartStore()
-  const { addNotification, showPaymentModal, setShowPaymentModal } = useUIStore()
+  const { addNotification, showPaymentModal, setShowPaymentModal, setShowVoiceBilling } = useUIStore()
   const { tables, fetchTables } = useTableStore()
   const { orders, fetchOrders } = useOrderStore()
 
@@ -140,6 +146,7 @@ export default function TouchScreenPOSPage() {
   }
 
   const subtotal = getSubtotal()
+  const discountAmount = getDiscountAmount()
   const tax = getTax()
   const total = getTotal()
 
@@ -214,6 +221,16 @@ export default function TouchScreenPOSPage() {
             </button>
           )}
         </div>
+
+        {/* Voice Billing */}
+        <button
+          onClick={() => setShowVoiceBilling(true)}
+          className="p-3 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 active:scale-95 transition-all relative group"
+          title="Voice Billing"
+        >
+          <Mic className="w-5 h-5" />
+          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white dark:border-surface-900 group-hover:animate-ping" />
+        </button>
 
         {/* Fullscreen Toggle */}
         <button
@@ -573,6 +590,29 @@ export default function TouchScreenPOSPage() {
                       <span>Subtotal</span>
                       <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
                     </div>
+
+                    {discount.type !== 'none' && (
+                      <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                        <span className="flex items-center gap-1">
+                          <Percent className="w-3 h-3" />
+                          Discount ({discount.type === 'percentage' ? `${discount.value}%` : 'Flat'})
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span className="font-mono font-semibold">-{formatCurrency(discountAmount)}</span>
+                          <button
+                            onClick={() => {
+                              setDiscount({ type: 'none', value: 0 })
+                              addNotification({ type: 'info', title: 'Discount Removed', message: 'Discount has been cleared.' })
+                            }}
+                            className="p-1 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                            title="Remove Discount"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between text-xs text-surface-400">
                       <span>GST (5%)</span>
                       <span className="font-mono">{formatCurrency(tax.total)}</span>
@@ -584,6 +624,126 @@ export default function TouchScreenPOSPage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* ── Discount / Hold / Clear Row ── */}
+                  <div className="px-4 pb-2 flex gap-2">
+                    <button
+                      onClick={() => setShowDiscount(!showDiscount)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-bold transition-all active:scale-95',
+                        showDiscount
+                          ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
+                          : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600'
+                      )}
+                    >
+                      <Percent className="w-4 h-4" />
+                      Discount
+                    </button>
+                    <button
+                      onClick={() => {
+                        holdOrder()
+                        setCartOpen(false)
+                        addNotification({ type: 'info', title: 'Order Held', message: 'You can recall it from the held orders.' })
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600 text-sm font-bold active:scale-95 transition-all"
+                    >
+                      <Pause className="w-4 h-4" />
+                      Hold
+                    </button>
+                    <button
+                      onClick={() => { clearCart(); setCartOpen(false) }}
+                      className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-95 transition-all"
+                      title="Clear Cart"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Discount Input Panel */}
+                  <AnimatePresence>
+                    {showDiscount && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden px-4 pb-3"
+                      >
+                        <div className="p-3 rounded-xl bg-surface-100 dark:bg-surface-800 space-y-2">
+                          <div className="flex gap-2">
+                            <select
+                              value={discountType}
+                              onChange={(e) => setDiscountType(e.target.value)}
+                              className="px-3 py-2.5 rounded-xl bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-500/30 w-24"
+                            >
+                              <option value="percentage">%</option>
+                              <option value="flat">₹ Flat</option>
+                            </select>
+                            <input
+                              type="number"
+                              value={discountInput}
+                              onChange={(e) => setDiscountInput(e.target.value)}
+                              placeholder="Value"
+                              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm font-medium outline-none focus:ring-2 focus:ring-primary-500/30"
+                            />
+                          </div>
+                          <button
+                            onClick={() => {
+                              const value = parseFloat(discountInput)
+                              if (isNaN(value) || value <= 0) return
+                              setDiscount({ type: discountType, value })
+                              setShowDiscount(false)
+                              setDiscountInput('')
+                              addNotification({ type: 'success', title: 'Discount Applied', message: discountType === 'percentage' ? `${value}% off` : `₹${value} off` })
+                            }}
+                            className="w-full py-3 rounded-xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 active:scale-[0.97] transition-all shadow-lg shadow-green-500/25"
+                          >
+                            Apply Discount
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Held Orders Quick-Recall */}
+                  {heldOrders.length > 0 && (
+                    <div className="px-4 pb-2">
+                      <button
+                        onClick={() => setShowHeldOrders(!showHeldOrders)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm font-bold hover:bg-amber-100 dark:hover:bg-amber-900/30 active:scale-[0.98] transition-all"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Pause className="w-4 h-4" />
+                          {heldOrders.length} Held Order{heldOrders.length > 1 ? 's' : ''}
+                        </span>
+                        <ChevronDown className={cn('w-4 h-4 transition-transform', showHeldOrders && 'rotate-180')} />
+                      </button>
+                      <AnimatePresence>
+                        {showHeldOrders && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden mt-2 space-y-2"
+                          >
+                            {heldOrders.map((order) => (
+                              <div key={order.id} className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-800 border border-amber-200 dark:border-amber-800">
+                                <div>
+                                  <p className="text-xs font-bold dark:text-white">{order.id}</p>
+                                  <p className="text-[10px] text-surface-500">{order.items.length} items • {order.table ? `Table ${order.table}` : order.orderType}</p>
+                                </div>
+                                <button
+                                  onClick={() => { recallOrder(order.id); setShowHeldOrders(false) }}
+                                  className="px-3 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 active:scale-95 transition-all shadow-md shadow-amber-500/25"
+                                >
+                                  <Play className="w-3.5 h-3.5 inline mr-1" /> Recall
+                                </button>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="px-4 pb-4 flex gap-3">

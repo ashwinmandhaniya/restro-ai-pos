@@ -493,7 +493,7 @@ export default function WaiterDisplayPage() {
 
                 <div className="flex-1 overflow-y-auto px-4 py-3 no-scrollbar space-y-2.5">
               <AnimatePresence>
-                {liveOrders.map(order => {
+                {liveOrders.map((order, i) => {
                   const orderSt = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.new
                       return (
                         <motion.div

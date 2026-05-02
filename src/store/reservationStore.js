@@ -58,6 +58,22 @@ const useReservationStore = create((set, get) => ({
     }
   },
 
+  deleteReservation: async (id) => {
+    set({ isLoading: true, error: null })
+    try {
+      await api.delete(`/tenant/reservations/${id}`)
+      set((state) => ({
+        reservations: state.reservations.filter(r => r._id !== id)
+      }))
+      return { success: true }
+    } catch (error) {
+      set({ error: error.response?.data?.message || 'Failed to delete reservation' })
+      return { success: false, error: error.response?.data?.message }
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
   markSeated: async (id) => {
     set({ isLoading: true, error: null })
     try {

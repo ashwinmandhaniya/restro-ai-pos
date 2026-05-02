@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays, Clock, Users, Plus, Check, X, Phone,
-  MapPin, UserCircle, ChevronLeft, ChevronRight, LayoutGrid, List
+  MapPin, UserCircle, ChevronLeft, ChevronRight, LayoutGrid, List,
+  CheckCircle, Trash2
 } from 'lucide-react';
 import useReservationStore from '@/store/reservationStore';
 import useTableStore from '@/store/tableStore';
@@ -139,10 +140,10 @@ export default function ReservationsPage() {
   const {
     reservations, isLoading, viewMode, setViewMode,
     selectedDate, setSelectedDate, fetchReservations,
-    markSeated, createReservation
+    markSeated, createReservation, updateReservation, deleteReservation
   } = useReservationStore();
   const { fetchTables } = useTableStore();
-  const { addNotification } = useUIStore();
+  const { addNotification, confirmAction } = useUIStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRes, setSelectedRes] = useState(null);
@@ -160,6 +161,52 @@ export default function ReservationsPage() {
       setSelectedRes(null);
     } else {
       addNotification({ title: 'Error', message: result.error, type: 'error' });
+    }
+  };
+
+  const handleComplete = async (res) => {
+    const result = await updateReservation(res._id, { status: 'completed' });
+    if (result.success) {
+      addNotification({ title: 'Success', message: 'Reservation marked as completed.', type: 'success' });
+      setSelectedRes(null);
+    } else {
+      addNotification({ title: 'Error', message: result.error, type: 'error' });
+    }
+  };
+
+  const handleCancel = async (res) => {
+    const isConfirmed = await confirmAction({
+      title: 'Cancel Reservation',
+      message: 'Are you sure you want to cancel this reservation?',
+      confirmText: 'Cancel Booking',
+      cancelText: 'Keep Booking'
+    });
+    if (isConfirmed) {
+      const result = await updateReservation(res._id, { status: 'cancelled' });
+      if (result.success) {
+        addNotification({ title: 'Success', message: 'Reservation cancelled.', type: 'success' });
+        setSelectedRes(null);
+      } else {
+        addNotification({ title: 'Error', message: result.error, type: 'error' });
+      }
+    }
+  };
+
+  const handleDelete = async (res) => {
+    const isConfirmed = await confirmAction({
+      title: 'Delete Reservation',
+      message: 'Are you sure you want to completely delete this reservation?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+    if (isConfirmed) {
+      const result = await deleteReservation(res._id);
+      if (result.success) {
+        addNotification({ title: 'Success', message: 'Reservation deleted.', type: 'success' });
+        setSelectedRes(null);
+      } else {
+        addNotification({ title: 'Error', message: result.error, type: 'error' });
+      }
     }
   };
 
@@ -370,11 +417,30 @@ export default function ReservationsPage() {
                     Mark as Seated
                   </button>
                 )}
+                {['pending', 'confirmed', 'seated'].includes(selectedRes.status) && (
+                  <button
+                    onClick={() => handleComplete(selectedRes)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Mark as Completed
+                  </button>
+                )}
                 {['pending', 'confirmed'].includes(selectedRes.status) && (
-                  <button className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-xl transition-colors border border-red-200 dark:border-red-500/20">
+                  <button 
+                    onClick={() => handleCancel(selectedRes)}
+                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-xl transition-colors border border-red-200 dark:border-red-500/20"
+                  >
                     Cancel Reservation
                   </button>
                 )}
+                <button 
+                  onClick={() => handleDelete(selectedRes)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-surface-100 hover:bg-red-100 dark:bg-surface-800 dark:hover:bg-red-900/30 text-surface-600 hover:text-red-600 dark:text-surface-400 dark:hover:text-red-400 font-semibold rounded-xl transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Reservation
+                </button>
               </div>
             </motion.aside>
           )}

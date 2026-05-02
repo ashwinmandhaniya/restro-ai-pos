@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Minus, Trash2, Percent, User, Hash, Pause, Play, ShoppingBag, Truck, UtensilsCrossed, StickyNote, FileText } from 'lucide-react'
+import { Plus, Minus, Trash2, Percent, User, Hash, Pause, Play, ShoppingBag, Truck, UtensilsCrossed, StickyNote, FileText, X } from 'lucide-react'
 import useCartStore from '@/store/cartStore'
 import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
@@ -417,7 +417,19 @@ export default function CartPanel() {
                   <Percent className="w-3 h-3" />
                   Discount ({discount.type === 'percentage' ? `${discount.value}%` : 'Flat'})
                 </span>
-                <span className="font-mono font-semibold">-{formatCurrency(discountAmount)}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono font-semibold">-{formatCurrency(discountAmount)}</span>
+                  <button
+                    onClick={() => {
+                      setDiscount({ type: 'none', value: 0 })
+                      addNotification({ type: 'info', title: 'Discount Removed', message: 'Discount has been cleared.' })
+                    }}
+                    className="p-1 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    title="Remove Discount"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
               </div>
             )}
             

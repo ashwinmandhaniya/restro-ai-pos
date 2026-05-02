@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, MicOff, X, Volume2, Sparkles, Check, Plus, ShieldCheck, Globe, RotateCcw, AudioLines } from 'lucide-react'
 import useUIStore from '@/store/uiStore'
 import useCartStore from '@/store/cartStore'
-import { menuItems } from '@/data/menuData'
+import useMenuStore from '@/store/menuStore'
 import { formatCurrency } from '@/lib/utils'
 import api from '@/lib/api'
 
@@ -16,6 +16,7 @@ const LANGUAGES = [
 export default function VoiceBilling() {
   const { setShowVoiceBilling, addNotification } = useUIStore()
   const { addItem } = useCartStore()
+  const { menuItems } = useMenuStore()
 
   // Core states
   const [isListening, setIsListening] = useState(false)
