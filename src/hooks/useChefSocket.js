@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import useAuthStore from '@/store/authStore';
 import useChefStore from '@/store/chefStore';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
 
 export default function useChefSocket() {
   const { token, user } = useAuthStore();

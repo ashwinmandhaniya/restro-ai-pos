@@ -398,7 +398,7 @@ export default function SettingsPage() {
                              <button 
                                onClick={async () => {
                                  try {
-                                   const response = await fetch(`${import.meta.env.VITE_API_URL}/api/whatsapp/test-message`, {
+                                   const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/whatsapp/test-message`, {
                                      method: 'POST',
                                      headers: {
                                        'Content-Type': 'application/json',
