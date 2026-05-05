@@ -272,7 +272,7 @@ function BrevoEmailTab() {
             <input
               value={form.senderName}
               onChange={e => setForm(f => ({ ...f, senderName: e.target.value }))}
-              placeholder="RestroAI Alerts"
+              placeholder="RestroxAI Alerts"
               className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none placeholder:text-slate-600"
             />
           </div>
@@ -281,7 +281,7 @@ function BrevoEmailTab() {
             <input
               value={form.senderEmail}
               onChange={e => setForm(f => ({ ...f, senderEmail: e.target.value }))}
-              placeholder="noreply@restroai.com"
+              placeholder="noreply@restroxai.in"
               className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none placeholder:text-slate-600"
             />
           </div>

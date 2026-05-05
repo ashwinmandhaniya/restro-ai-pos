@@ -86,7 +86,7 @@ export default function Sidebar() {
               className="overflow-hidden"
             >
               <h1 className="text-lg font-bold whitespace-nowrap">
-                <span className="text-gradient">Restro</span>
+                <span className="text-gradient">Restrox</span>
                 <span className="text-surface-900 dark:text-white">AI</span>
               </h1>
             </motion.div>

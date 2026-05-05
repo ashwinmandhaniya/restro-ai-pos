@@ -176,7 +176,7 @@ export default function OwnerCopilot() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! 👋 I'm **RestroAI Copilot** — your real-time AI business analyst.\n\nI can answer questions about your **revenue, orders, menu performance, customers, reservations, tables, platform orders**, and more — all from your live data.\n\nWhat would you like to know?",
+      content: "Hi! 👋 I'm **RestroxAI Copilot** — your real-time AI business analyst.\n\nI can answer questions about your **revenue, orders, menu performance, customers, reservations, tables, platform orders**, and more — all from your live data.\n\nWhat would you like to know?",
       timestamp: new Date(),
       suggestions: [],
     }
@@ -280,7 +280,7 @@ export default function OwnerCopilot() {
             </div>
             <div>
               <h2 className="text-sm font-bold flex items-center gap-1.5">
-                RestroAI Copilot
+                RestroxAI Copilot
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
               </h2>
               <p className="text-[11px] opacity-80 flex items-center gap-1">

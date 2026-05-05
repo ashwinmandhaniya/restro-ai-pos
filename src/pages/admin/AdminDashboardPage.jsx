@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white">Command Center</h1>
-        <p className="text-slate-400 mt-1">Global overview of the RestroAI platform</p>
+        <p className="text-slate-400 mt-1">Global overview of the RestroxAI platform</p>
       </div>
 
       {/* KPI Cards */}

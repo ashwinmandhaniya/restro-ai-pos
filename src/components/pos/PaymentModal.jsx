@@ -266,7 +266,7 @@ export default function PaymentModal() {
             />
           )}
           <h2 style={{ fontSize: '18px', margin: '0' }}>
-            {restaurantSettings?.settings?.billSettings?.brandName || restaurantSettings?.name || 'RestroAI'}
+            {restaurantSettings?.settings?.billSettings?.brandName || restaurantSettings?.name || 'RestroxAI'}
           </h2>
           <p style={{ fontSize: '10px', margin: '2px 0', opacity: 0.8 }}>
             {restaurantSettings?.settings?.billSettings?.headerText}
@@ -336,7 +336,7 @@ export default function PaymentModal() {
           <p style={{ fontStyle: 'italic', marginBottom: '5px' }}>
             {restaurantSettings?.settings?.billSettings?.footerText || 'Thank you! Visit again.'}
           </p>
-          <p style={{ opacity: 0.5, fontSize: '8px' }}>RestroAI Cloud Billing</p>
+          <p style={{ opacity: 0.5, fontSize: '8px' }}>RestroxAI Cloud Billing</p>
           {restaurantSettings?.settings?.billSettings?.showFSSAI && restaurantSettings?.kyc?.fssaiNumber && (
             <p style={{ fontSize: '8px', opacity: 0.5 }}>FSSAI: {restaurantSettings?.kyc?.fssaiNumber}</p>
           )}
