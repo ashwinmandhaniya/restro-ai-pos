@@ -44,6 +44,7 @@ const WasteManagementPage = lazy(() => import('./pages/WasteManagementPage'));
 const RecipeManagementPage = lazy(() => import('./pages/RecipeManagementPage'));
 const OrderAlertPage = lazy(() => import('./pages/OrderAlertPage'));
 const MultiCounterPage = lazy(() => import('./pages/MultiCounterPage'));
+const UserNotFoundPage = lazy(() => import('./pages/UserNotFoundPage'));
 
 // Admin Pages (lazy loaded for bundle splitting)
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -139,6 +140,12 @@ function App() {
           <PublicRoute>
             <AuthPage />
           </PublicRoute>
+        } />
+
+        <Route path="/user-not-found" element={
+          <Suspense fallback={<AdminLoader />}>
+            <UserNotFoundPage />
+          </Suspense>
         } />
         
         <Route path="/display/:restaurantCode" element={

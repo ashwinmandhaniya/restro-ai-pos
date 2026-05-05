@@ -3,6 +3,13 @@ import api from '@/lib/api';
 import useOutletStore from './outletStore';
 import { secureStorage, sessionManager } from '@/lib/security';
 
+// Helper: detect plan-gating error codes from backend
+const isPlanGated = (err) => {
+  const code = err.response?.data?.code;
+  const status = err.response?.status;
+  return status === 403 && (code === 'PENDING_APPROVAL' || code === 'NO_ACTIVE_PLAN' || code === 'USER_NOT_FOUND');
+};
+
 const useAuthStore = create((set, get) => ({
   user: secureStorage.getItem('user') || null,
   token: secureStorage.getItem('token') || null,
@@ -32,10 +39,16 @@ const useAuthStore = create((set, get) => ({
       useOutletStore.getState().init();
       return true;
     } catch (err) {
-      set({ 
-        isLoading: false, 
-        error: err.response?.data?.message || 'Login failed' 
-      });
+      set({ isLoading: false });
+      
+      // Redirect to user-not-found page for unapproved / no-plan users
+      if (isPlanGated(err)) {
+        const userEmail = err.response?.data?.email || email;
+        window.location.href = `/user-not-found?email=${encodeURIComponent(userEmail)}`;
+        return false;
+      }
+      
+      set({ error: err.response?.data?.message || 'Login failed' });
       return false;
     }
   },
@@ -62,10 +75,16 @@ const useAuthStore = create((set, get) => ({
       useOutletStore.getState().init();
       return true;
     } catch (err) {
-      set({ 
-        isLoading: false, 
-        error: err.response?.data?.message || 'Registration failed' 
-      });
+      set({ isLoading: false });
+      
+      // New registration always gets PENDING_APPROVAL → show error page
+      if (isPlanGated(err)) {
+        const userEmail = err.response?.data?.email || email;
+        window.location.href = `/user-not-found?email=${encodeURIComponent(userEmail)}`;
+        return false;
+      }
+      
+      set({ error: err.response?.data?.message || 'Registration failed' });
       return false;
     }
   },
@@ -112,6 +131,19 @@ const useAuthStore = create((set, get) => ({
       // Trigger outlet store initialization
       useOutletStore.getState().init();
     } catch (err) {
+      // If restaurant was suspended / approval revoked mid-session
+      if (isPlanGated(err)) {
+        const userEmail = err.response?.data?.email || '';
+        // Clear session
+        secureStorage.removeItem('token');
+        secureStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ user: null, token: null });
+        window.location.href = `/user-not-found?email=${encodeURIComponent(userEmail)}`;
+        return;
+      }
+      
       set({ user: null, token: null });
       secureStorage.removeItem('token');
       secureStorage.removeItem('user');
