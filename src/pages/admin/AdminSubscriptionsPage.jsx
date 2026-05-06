@@ -1,30 +1,111 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, Plus, X, Crown, Zap, Rocket, Building2, Pencil, Trash2, Ban } from 'lucide-react';
+import { CreditCard, Plus, X, Crown, Zap, Rocket, Building2, Pencil, Trash2, Ban, Search, CheckCircle2, RefreshCw, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
 import useAdminPlanStore from '@/store/adminPlanStore';
+import useAdminTenantStore from '@/store/adminTenantStore';
 import { cn } from '@/lib/utils';
 
-const AVAILABLE_FEATURES = [
-  { id: 'pos', label: 'POS Billing' },
-  { id: 'tables', label: 'Table Management' },
-  { id: 'reservations', label: 'Table Reservations' },
-  { id: 'kds', label: 'Orders & KDS' },
-  { id: 'history', label: 'Order History' },
-  { id: 'qr_ordering', label: 'QR Ordering' },
-  { id: 'qr_analytics', label: 'QR Analytics' },
-  { id: 'whatsapp', label: 'WhatsApp Integrations' },
-  { id: 'menu', label: 'Menu Management' },
-  { id: 'inventory', label: 'Inventory Control' },
-  { id: 'multi_outlet', label: 'Multi-Outlet Admin' },
-  { id: 'inventory_transfers', label: 'Inventory Transfers' },
-  { id: 'network_analytics', label: 'Network Analytics' },
-  { id: 'menu_sync', label: 'Menu Synchronization' },
-  { id: 'customers', label: 'Customer CRM' },
-  { id: 'ai_insights', label: 'AI Insights & Copilot' },
-  { id: 'reports', label: 'Advanced Reports' },
-  { id: 'users_roles', label: 'Advanced User Roles' },
-  { id: 'loyalty', label: 'Loyalty Program' },
+const FEATURE_MODULES = [
+  {
+    category: 'Core POS',
+    color: 'text-emerald-400',
+    features: [
+      { id: 'pos_billing', label: 'POS Billing' },
+      { id: 'touch_screen_pos', label: 'Touch Screen POS' },
+      { id: 'multi_counter', label: 'Multi Counter POS' },
+      { id: 'basic_menu', label: 'Basic Menu Management' },
+      { id: 'basic_reports', label: 'Basic Reports' },
+    ]
+  },
+  {
+    category: 'Table & Reservations',
+    color: 'text-blue-400',
+    features: [
+      { id: 'table_management', label: 'Table Management' },
+      { id: 'reservations', label: 'Table Reservations' },
+    ]
+  },
+  {
+    category: 'Kitchen & Orders',
+    color: 'text-orange-400',
+    features: [
+      { id: 'kds', label: 'Kitchen Display (KDS)' },
+      { id: 'chef_management', label: 'Chef Management' },
+      { id: 'order_history', label: 'Order History' },
+      { id: 'order_alerts', label: 'Order Alerts' },
+      { id: 'token_management', label: 'Token Management' },
+    ]
+  },
+  {
+    category: 'Staff Management',
+    color: 'text-pink-400',
+    features: [
+      { id: 'waiter_management', label: 'Waiter Management' },
+      { id: 'waiter_display', label: 'Waiter Display' },
+      { id: 'staff_management', label: 'Staff Management' },
+      { id: 'user_management', label: 'User Management' },
+      { id: 'role_management', label: 'Role Management' },
+    ]
+  },
+  {
+    category: 'Menu & Inventory',
+    color: 'text-amber-400',
+    features: [
+      { id: 'advanced_menu', label: 'Advanced Menu' },
+      { id: 'recipe_management', label: 'Recipe Management' },
+      { id: 'inventory', label: 'Inventory Control' },
+      { id: 'waste_management', label: 'Waste Management' },
+    ]
+  },
+  {
+    category: 'QR & Digital Ordering',
+    color: 'text-cyan-400',
+    features: [
+      { id: 'qr_ordering', label: 'QR Code Ordering' },
+      { id: 'qr_analytics', label: 'QR Analytics' },
+    ]
+  },
+  {
+    category: 'CRM & Marketing',
+    color: 'text-violet-400',
+    features: [
+      { id: 'customers', label: 'Customer CRM' },
+      { id: 'loyalty', label: 'Loyalty Program' },
+      { id: 'whatsapp', label: 'WhatsApp Marketing' },
+    ]
+  },
+  {
+    category: 'Multi-Outlet',
+    color: 'text-teal-400',
+    features: [
+      { id: 'multi_outlet', label: 'Multi-Outlet Admin' },
+      { id: 'inventory_transfers', label: 'Inventory Transfers' },
+      { id: 'network_analytics', label: 'Network Analytics' },
+      { id: 'menu_sync', label: 'Menu Synchronization' },
+    ]
+  },
+  {
+    category: 'AI & Analytics',
+    color: 'text-fuchsia-400',
+    features: [
+      { id: 'ai_insights', label: 'AI Insights & Copilot' },
+      { id: 'advanced_reports', label: 'Advanced Reports' },
+      { id: 'crash_prevention', label: 'Crash Prevention' },
+    ]
+  },
+  {
+    category: 'Integrations',
+    color: 'text-sky-400',
+    features: [
+      { id: 'integrations', label: 'Third-Party Integrations' },
+    ]
+  }
 ];
+
+// Flat lookup for feature labels
+const FEATURE_LABEL_MAP = {};
+FEATURE_MODULES.forEach(g => g.features.forEach(f => { FEATURE_LABEL_MAP[f.id] = f.label; }));
+const ALL_FEATURE_IDS = Object.keys(FEATURE_LABEL_MAP);
 
 const planIcons = { 'free-trial': Zap, 'starter': CreditCard, 'growth': Rocket, 'enterprise': Crown };
 const planColors = { 'free-trial': 'from-slate-500 to-slate-600', 'starter': 'from-blue-500 to-cyan-600', 'growth': 'from-violet-500 to-fuchsia-600', 'enterprise': 'from-amber-500 to-orange-600' };
@@ -43,6 +124,17 @@ export default function AdminSubscriptionsPage() {
     limits: { maxOrders: -1, maxOutlets: -1, maxUsers: -1, maxMenuItems: -1, maxRoles: -1 },
     features: [] 
   });
+
+  const { tenants, isLoading: tenantsLoading, fetchTenants } = useAdminTenantStore();
+  const [restaurantSearch, setRestaurantSearch] = useState('');
+
+  const filteredTenants = useMemo(() => {
+    if (!restaurantSearch.trim()) return tenants;
+    const q = restaurantSearch.toLowerCase();
+    return tenants.filter(t =>
+      t.name?.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q)
+    );
+  }, [tenants, restaurantSearch]);
 
   useEffect(() => { fetchPlans(); fetchSubscriptions(); }, []);
 
@@ -73,6 +165,7 @@ export default function AdminSubscriptionsPage() {
     await assignSubscription(assignForm);
     setShowAssign(false);
     setAssignForm({ restaurantId: '', planId: '', billingCycle: 'monthly' });
+    setRestaurantSearch('');
   };
 
   const statusBadge = {
@@ -96,7 +189,7 @@ export default function AdminSubscriptionsPage() {
               <Plus className="w-4 h-4" /> New Plan
             </button>
           )}
-          <button onClick={() => setShowAssign(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-all">
+          <button onClick={() => { setShowAssign(true); fetchTenants({ limit: 200 }); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-all">
             <Plus className="w-4 h-4" /> Assign Plan
           </button>
         </div>
@@ -142,7 +235,7 @@ export default function AdminSubscriptionsPage() {
                 {plan.features.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-1">
                     {plan.features.slice(0, 5).map(f => (
-                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400">{f.replace(/_/g, ' ')}</span>
+                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400">{FEATURE_LABEL_MAP[f] || f.replace(/_/g, ' ')}</span>
                     ))}
                     {plan.features.length > 5 && <span className="text-[10px] text-slate-500">+{plan.features.length - 5} more</span>}
                   </div>
@@ -183,30 +276,158 @@ export default function AdminSubscriptionsPage() {
         </div>
       )}
 
-      {/* Assign Modal */}
+      {/* Assign Plan Modal */}
       <AnimatePresence>
         {showAssign && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6">
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 m-auto">
               <div className="flex justify-between mb-5">
-                <h3 className="text-xl font-bold text-white">Assign Plan</h3>
-                <button onClick={() => setShowAssign(false)} className="text-slate-400"><X className="w-5 h-5" /></button>
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2"><CreditCard className="w-5 h-5 text-violet-400" /> Assign Plan to Restaurant</h3>
+                  <p className="text-xs text-slate-500 mt-1">Select a restaurant and choose a plan to assign.</p>
+                </div>
+                <button onClick={() => setShowAssign(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={handleAssign} className="space-y-4">
-                <div><label className="text-xs text-slate-400 mb-1 block">Restaurant ID *</label>
-                  <input required placeholder="Paste MongoDB ID" className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none" value={assignForm.restaurantId} onChange={e => setAssignForm({...assignForm, restaurantId: e.target.value})} /></div>
-                <div><label className="text-xs text-slate-400 mb-1 block">Plan *</label>
-                  <select required className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none" value={assignForm.planId} onChange={e => setAssignForm({...assignForm, planId: e.target.value})}>
-                    <option value="">Select Plan</option>
-                    {plans.map(p => <option key={p._id} value={p._id}>{p.name} — ₹{p.price.monthly}/mo</option>)}
-                  </select></div>
-                <div><label className="text-xs text-slate-400 mb-1 block">Billing Cycle</label>
-                  <select className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none" value={assignForm.billingCycle} onChange={e => setAssignForm({...assignForm, billingCycle: e.target.value})}>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select></div>
-                <button type="submit" className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-all">Assign Subscription</button>
+              <form onSubmit={handleAssign} className="space-y-5">
+                {/* Step 1: Select Restaurant */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wider">① Select Restaurant</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search restaurants by name or email…"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:outline-none"
+                      value={restaurantSearch}
+                      onChange={e => setRestaurantSearch(e.target.value)}
+                      onFocus={() => { if (tenants.length === 0) fetchTenants({ limit: 200 }); }}
+                    />
+                  </div>
+                  {/* Restaurant list */}
+                  <div className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50 divide-y divide-slate-800/60">
+                    {tenantsLoading ? (
+                      <div className="px-4 py-6 text-center text-slate-500 text-xs">Loading restaurants…</div>
+                    ) : filteredTenants.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-slate-500 text-xs">{restaurantSearch ? 'No restaurants match your search.' : 'No restaurants found.'}</div>
+                    ) : (
+                      filteredTenants.map(t => (
+                        <button
+                          key={t._id}
+                          type="button"
+                          onClick={() => setAssignForm({ ...assignForm, restaurantId: t._id })}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-800/50 transition-colors',
+                            assignForm.restaurantId === t._id && 'bg-violet-600/15 border-l-2 border-violet-500'
+                          )}
+                        >
+                          <div className={cn(
+                            "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
+                            assignForm.restaurantId === t._id ? "bg-violet-600 text-white" : "bg-slate-800 text-slate-400"
+                          )}>
+                            {t.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("text-sm font-semibold truncate", assignForm.restaurantId === t._id ? "text-violet-300" : "text-white")}>{t.name}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{t.email}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold capitalize',
+                              t.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+                              t.status === 'pending_approval' ? 'bg-amber-500/20 text-amber-400' :
+                              'bg-slate-500/20 text-slate-400'
+                            )}>{t.status?.replace(/_/g, ' ')}</span>
+                            {assignForm.restaurantId === t._id && <CheckCircle2 className="w-4 h-4 text-violet-400" />}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {assignForm.restaurantId && (
+                    <p className="text-[11px] text-slate-600 mt-1.5 font-mono">ID: {assignForm.restaurantId}</p>
+                  )}
+                </div>
+
+                {/* Step 2: Select Plan */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wider">② Select Plan</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {plans.map(p => {
+                      const isSelected = assignForm.planId === p._id;
+                      const Icon = planIcons[p.slug] || CreditCard;
+                      const gradient = planColors[p.slug] || 'from-violet-500 to-fuchsia-600';
+                      const price = assignForm.billingCycle === 'yearly' ? p.price.yearly : p.price.monthly;
+                      return (
+                        <button
+                          key={p._id}
+                          type="button"
+                          onClick={() => setAssignForm({ ...assignForm, planId: p._id })}
+                          className={cn(
+                            'relative rounded-xl border p-4 text-left transition-all',
+                            isSelected ? 'border-violet-500 bg-violet-600/10 ring-1 ring-violet-500/30' : 'border-slate-800 bg-slate-900 hover:border-slate-700'
+                          )}
+                        >
+                          {isSelected && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-violet-400" /></div>}
+                          <div className={cn('w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center mb-2', gradient)}>
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
+                          <p className="text-sm font-bold text-white">{p.name}</p>
+                          <p className="text-lg font-black text-white font-mono mt-1">₹{price?.toLocaleString() || 0}
+                            <span className="text-xs text-slate-500 font-normal ml-1">/{assignForm.billingCycle === 'yearly' ? 'yr' : 'mo'}</span>
+                          </p>
+                          {p.isPopular && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-500 text-white font-bold uppercase mt-2 inline-block">Popular</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Step 3: Billing Cycle */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wider">③ Billing Cycle</label>
+                  <div className="flex gap-3">
+                    {['monthly', 'yearly'].map(cycle => (
+                      <button
+                        key={cycle}
+                        type="button"
+                        onClick={() => setAssignForm({ ...assignForm, billingCycle: cycle })}
+                        className={cn(
+                          'flex-1 px-4 py-3 rounded-xl border text-sm font-semibold capitalize transition-all',
+                          assignForm.billingCycle === cycle
+                            ? 'border-violet-500 bg-violet-600/15 text-violet-300'
+                            : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
+                        )}
+                      >
+                        {cycle}
+                        {cycle === 'yearly' && <span className="block text-[10px] text-emerald-400 mt-0.5">Save more</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                {assignForm.restaurantId && assignForm.planId && (() => {
+                  const selTenant = tenants.find(t => t._id === assignForm.restaurantId);
+                  const selPlan = plans.find(p => p._id === assignForm.planId);
+                  const price = assignForm.billingCycle === 'yearly' ? selPlan?.price?.yearly : selPlan?.price?.monthly;
+                  return (
+                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Summary</p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-300">{selTenant?.name || 'Restaurant'}</span>
+                        <span className="text-white font-bold">{selPlan?.name} — ₹{price?.toLocaleString()}/{assignForm.billingCycle === 'yearly' ? 'yr' : 'mo'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <button
+                  type="submit"
+                  disabled={!assignForm.restaurantId || !assignForm.planId || isLoading}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-all disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <><RefreshCw className="w-4 h-4 animate-spin" /> Assigning…</> : <><CreditCard className="w-4 h-4" /> Assign Subscription</>}
+                </button>
               </form>
             </motion.div>
           </div>
@@ -252,25 +473,60 @@ export default function AdminSubscriptionsPage() {
                     <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxMenuItems || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxMenuItems: Number(e.target.value)}})} /></div>
                 </div>
                 <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-800 border-dashed">
-                  <label className="text-sm font-semibold text-white mb-3 block">Available Features</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {AVAILABLE_FEATURES.map(feature => (
-                      <label key={feature.id} className="flex items-center gap-2.5 text-sm text-slate-300 cursor-pointer hover:text-white transition-colors">
-                        <input 
-                          type="checkbox" 
-                          checked={(planForm.features || []).includes(feature.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setPlanForm(prev => ({ ...prev, features: [...(prev.features || []), feature.id] }));
-                            } else {
-                              setPlanForm(prev => ({ ...prev, features: (prev.features || []).filter(f => f !== feature.id) }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-violet-500 focus:ring-violet-500 focus:ring-offset-slate-900 cursor-pointer"
-                        />
-                        {feature.label}
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-white">Feature / Module Control</label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setPlanForm(prev => ({ ...prev, features: [...ALL_FEATURE_IDS] }))}
+                        className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 font-bold hover:bg-emerald-500/25 transition-colors">Select All</button>
+                      <button type="button" onClick={() => setPlanForm(prev => ({ ...prev, features: [] }))}
+                        className="text-[10px] px-2.5 py-1 rounded-lg bg-red-500/15 text-red-400 font-bold hover:bg-red-500/25 transition-colors">Clear All</button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mb-4">Control which modules/features are available for tenants on this plan. <span className="text-white font-semibold">{(planForm.features || []).length}</span> of {ALL_FEATURE_IDS.length} features enabled.</p>
+                  <div className="space-y-3">
+                    {FEATURE_MODULES.map(group => {
+                      const groupFeatureIds = group.features.map(f => f.id);
+                      const enabledInGroup = groupFeatureIds.filter(id => (planForm.features || []).includes(id)).length;
+                      const allSelected = enabledInGroup === groupFeatureIds.length;
+                      return (
+                        <div key={group.category} className="rounded-xl border border-slate-700/50 bg-slate-900/60 overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/30">
+                            <span className={cn('text-xs font-bold uppercase tracking-wider', group.color)}>{group.category}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-500 font-mono">{enabledInGroup}/{groupFeatureIds.length}</span>
+                              <button type="button" onClick={() => {
+                                if (allSelected) {
+                                  setPlanForm(prev => ({ ...prev, features: (prev.features || []).filter(f => !groupFeatureIds.includes(f)) }));
+                                } else {
+                                  setPlanForm(prev => ({ ...prev, features: [...new Set([...(prev.features || []), ...groupFeatureIds])] }));
+                                }
+                              }} className={cn('p-0.5 rounded transition-colors', allSelected ? 'text-emerald-400' : 'text-slate-600 hover:text-slate-400')} title={allSelected ? 'Deselect All' : 'Select All'}>
+                                {allSelected ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="px-4 py-2.5 flex flex-wrap gap-2">
+                            {group.features.map(feature => {
+                              const isOn = (planForm.features || []).includes(feature.id);
+                              return (
+                                <button key={feature.id} type="button" onClick={() => {
+                                  if (isOn) {
+                                    setPlanForm(prev => ({ ...prev, features: (prev.features || []).filter(f => f !== feature.id) }));
+                                  } else {
+                                    setPlanForm(prev => ({ ...prev, features: [...(prev.features || []), feature.id] }));
+                                  }
+                                }} className={cn(
+                                  'text-[11px] px-2.5 py-1.5 rounded-lg font-semibold transition-all border',
+                                  isOn ? 'bg-violet-600/20 border-violet-500/40 text-violet-300' : 'bg-slate-800/60 border-slate-700/40 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+                                )}>
+                                  {isOn ? '✓ ' : ''}{feature.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
