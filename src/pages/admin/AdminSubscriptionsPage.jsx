@@ -150,7 +150,17 @@ export default function AdminSubscriptionsPage() {
 
   const openEditPlan = (plan) => {
     setEditingPlanId(plan._id);
-    setPlanForm({ ...plan, features: plan.features || [] });
+    setPlanForm({
+      ...plan,
+      features: plan.features || [],
+      limits: {
+        maxOrders: plan.limits?.maxOrders ?? -1,
+        maxOutlets: plan.limits?.maxOutlets ?? -1,
+        maxUsers: plan.limits?.maxUsers ?? -1,
+        maxMenuItems: plan.limits?.maxMenuItems ?? -1,
+        maxRoles: plan.limits?.maxRoles ?? -1,
+      }
+    });
     setShowPlanModal(true);
   };
 
@@ -226,11 +236,11 @@ export default function AdminSubscriptionsPage() {
                   {plan.price.yearly > 0 && <p className="text-xs text-slate-500 mt-1">₹{plan.price.yearly.toLocaleString()}/year</p>}
                 </div>
                 <div className="space-y-1.5 text-xs text-slate-400">
-                  <p>📦 {plan.limits.maxOrders === -1 ? 'Unlimited' : plan.limits.maxOrders} orders</p>
-                  <p>🏢 {plan.limits.maxOutlets === -1 ? 'Unlimited' : plan.limits.maxOutlets} outlets</p>
-                  <p>👤 {plan.limits.maxUsers === -1 ? 'Unlimited' : plan.limits.maxUsers} users</p>
-                  <p>🛡️ {plan.limits.maxRoles === -1 ? 'Unlimited' : plan.limits.maxRoles} roles</p>
-                  <p>🍽️ {plan.limits.maxMenuItems === -1 ? 'Unlimited' : plan.limits.maxMenuItems} menu items</p>
+                  <p>📦 {(plan.limits?.maxOrders ?? 0) === -1 ? 'Unlimited' : (plan.limits?.maxOrders ?? 0)} orders</p>
+                  <p>🏢 {(plan.limits?.maxOutlets ?? 0) === -1 ? 'Unlimited' : (plan.limits?.maxOutlets ?? 0)} outlets</p>
+                  <p>👤 {(plan.limits?.maxUsers ?? 0) === -1 ? 'Unlimited' : (plan.limits?.maxUsers ?? 0)} users</p>
+                  <p>🛡️ {(plan.limits?.maxRoles ?? 0) === -1 ? 'Unlimited' : (plan.limits?.maxRoles ?? 0)} roles</p>
+                  <p>🍽️ {(plan.limits?.maxMenuItems ?? 0) === -1 ? 'Unlimited' : (plan.limits?.maxMenuItems ?? 0)} menu items</p>
                 </div>
                 {plan.features.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-1">
@@ -462,15 +472,15 @@ export default function AdminSubscriptionsPage() {
                 </div>
                 <div className="grid grid-cols-5 gap-3">
                   <div><label className="text-xs text-slate-400 mb-1 block">Max Orders</label>
-                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxOrders || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxOrders: Number(e.target.value)}})} /></div>
+                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxOrders ?? -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxOrders: Number(e.target.value)}})} /></div>
                   <div><label className="text-xs text-slate-400 mb-1 block">Outlets</label>
-                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxOutlets || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxOutlets: Number(e.target.value)}})} /></div>
+                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxOutlets ?? -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxOutlets: Number(e.target.value)}})} /></div>
                   <div><label className="text-xs text-slate-400 mb-1 block">Users</label>
-                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxUsers || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxUsers: Number(e.target.value)}})} /></div>
+                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxUsers ?? -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxUsers: Number(e.target.value)}})} /></div>
                   <div><label className="text-xs text-slate-400 mb-1 block">Roles</label>
-                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxRoles || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxRoles: Number(e.target.value)}})} /></div>
+                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxRoles ?? -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxRoles: Number(e.target.value)}})} /></div>
                   <div><label className="text-xs text-slate-400 mb-1 block">Items</label>
-                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxMenuItems || -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxMenuItems: Number(e.target.value)}})} /></div>
+                    <input required type="number" className="w-full px-2 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[11px] text-white" value={planForm.limits?.maxMenuItems ?? -1} onChange={e => setPlanForm({...planForm, limits: {...planForm.limits, maxMenuItems: Number(e.target.value)}})} /></div>
                 </div>
                 <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-800 border-dashed">
                   <div className="flex items-center justify-between mb-3">
