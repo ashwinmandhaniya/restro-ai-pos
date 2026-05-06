@@ -12,41 +12,44 @@ import useOutletStore from '@/store/outletStore'
 import useAuthStore from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
+// Each nav item now has an optional `module` key that maps to a plan feature ID.
+// If `module` is set, the item is only visible when the tenant's plan includes that feature.
+// Items without `module` are always visible (e.g. Dashboard, Settings).
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
-  { path: '/pos', label: 'POS Billing', icon: ShoppingCart, highlight: true, permission: 'pos.billing' },
-  { path: '/touch-pos', label: 'Touch Screen POS', icon: Monitor, permission: 'pos.billing' },
-  { path: '/multi-counter', label: 'Multi Counter', icon: LayoutDashboard, permission: 'pos.billing' },
-  { path: '/tables', label: 'Tables', icon: TableProperties, permission: 'tables.manage' },
-  { path: '/reservations', label: 'Reservations', icon: CalendarCheck, permission: 'reservations.manage' },
-  { path: '/orders', label: 'Orders (POS)', icon: ClipboardList, permission: 'orders.view' },
-  { path: '/kitchen', label: 'Kitchen Display', icon: ChefHat, permission: 'kitchen.display' },
-  { path: '/chef-management', label: 'Chef Management', icon: Users, permission: 'kitchen.display' },
-  { path: '/waiter-management', label: 'Waiter Management', icon: UserCheck, permission: 'settings.manage' },
-  { path: '/waiter-display', label: 'Waiter Display', icon: Monitor, permission: 'settings.manage' },
-  { path: '/staff', label: 'Staff Management', icon: UsersRound, permission: 'settings.manage', highlight: true },
-  { path: '/tokens', label: 'Token Management', icon: Ticket, permission: 'tokens.manage' },
-  { path: '/order-history', label: 'Order History', icon: History, permission: 'orders.view' },
-  { path: '/qr-codes', label: 'QR Codes', icon: QrCode, permission: 'menu.manage' },
-  { path: '/qr-analytics', label: 'QR Analytics', icon: BarChart3, permission: 'reports.view' },
-  { path: '/whatsapp-settings', label: 'WhatsApp', icon: MessageSquareText, permission: 'whatsapp.marketing' },
-  { path: '/menu', label: 'Menu', icon: UtensilsCrossed, permission: 'menu.manage' },
-  { path: '/recipe-management', label: 'Recipe Management', icon: BookOpen, permission: 'menu.manage' },
-  { path: '/inventory', label: 'Inventory', icon: Package, permission: 'inventory.manage' },
-  { path: '/outlets/management', label: 'Outlets Settings', icon: Store, requirement: 'multi-outlet', permission: 'settings.manage' },
-  { path: '/outlets/transfers', label: 'Inventory Transfers', icon: Package, requirement: 'multi-outlet', permission: 'inventory.manage' },
-  { path: '/outlets/analytics', label: 'Network Analytics', icon: BarChart3, requirement: 'multi-outlet', permission: 'reports.view' },
-  { path: '/outlets/menu-sync', label: 'Menu Sync Policy', icon: RefreshCw, requirement: 'multi-outlet', permission: 'menu.manage' },
-  { path: '/customers', label: 'Customers', icon: Users, permission: 'customers.manage' },
-  { path: '/loyalty', label: 'Customer Loyalty', icon: Trophy, permission: 'customers.manage' },
-  { path: '/ai-insights', label: 'AI Insights', icon: Brain, permission: 'reports.view' },
-  { path: '/integrations', label: 'Integrations', icon: Plug, permission: 'settings.manage' },
-  { path: '/order-alerts', label: 'Order Alerts', icon: BellRing, highlight: true, permission: 'orders.view' },
-  { path: '/reports', label: 'Reports', icon: BarChart3, permission: 'reports.view' },
-  { path: '/settings/users', label: 'User Management', icon: Users, permission: 'settings.manage' },
-  { path: '/settings/roles', label: 'Role Management', icon: Shield, permission: 'settings.manage' },
-  { path: '/crash-prevention', label: 'Crash Prevention', icon: ShieldCheck, permission: 'settings.manage' },
-  { path: '/waste-management', label: 'Waste Management', icon: Leaf, permission: 'inventory.manage' },
+  { path: '/pos', label: 'POS Billing', icon: ShoppingCart, highlight: true, permission: 'pos.billing', module: 'pos_billing' },
+  { path: '/touch-pos', label: 'Touch Screen POS', icon: Monitor, permission: 'pos.billing', module: 'touch_screen_pos' },
+  { path: '/multi-counter', label: 'Multi Counter', icon: LayoutDashboard, permission: 'pos.billing', module: 'multi_counter' },
+  { path: '/tables', label: 'Tables', icon: TableProperties, permission: 'tables.manage', module: 'table_management' },
+  { path: '/reservations', label: 'Reservations', icon: CalendarCheck, permission: 'reservations.manage', module: 'reservations' },
+  { path: '/orders', label: 'Orders (POS)', icon: ClipboardList, permission: 'orders.view', module: 'pos_billing' },
+  { path: '/kitchen', label: 'Kitchen Display', icon: ChefHat, permission: 'kitchen.display', module: 'kds' },
+  { path: '/chef-management', label: 'Chef Management', icon: Users, permission: 'kitchen.display', module: 'chef_management' },
+  { path: '/waiter-management', label: 'Waiter Management', icon: UserCheck, permission: 'settings.manage', module: 'waiter_management' },
+  { path: '/waiter-display', label: 'Waiter Display', icon: Monitor, permission: 'settings.manage', module: 'waiter_display' },
+  { path: '/staff', label: 'Staff Management', icon: UsersRound, permission: 'settings.manage', highlight: true, module: 'staff_management' },
+  { path: '/tokens', label: 'Token Management', icon: Ticket, permission: 'tokens.manage', module: 'token_management' },
+  { path: '/order-history', label: 'Order History', icon: History, permission: 'orders.view', module: 'order_history' },
+  { path: '/qr-codes', label: 'QR Codes', icon: QrCode, permission: 'menu.manage', module: 'qr_ordering' },
+  { path: '/qr-analytics', label: 'QR Analytics', icon: BarChart3, permission: 'reports.view', module: 'qr_analytics' },
+  { path: '/whatsapp-settings', label: 'WhatsApp', icon: MessageSquareText, permission: 'whatsapp.marketing', module: 'whatsapp' },
+  { path: '/menu', label: 'Menu', icon: UtensilsCrossed, permission: 'menu.manage', module: 'basic_menu' },
+  { path: '/recipe-management', label: 'Recipe Management', icon: BookOpen, permission: 'menu.manage', module: 'recipe_management' },
+  { path: '/inventory', label: 'Inventory', icon: Package, permission: 'inventory.manage', module: 'inventory' },
+  { path: '/outlets/management', label: 'Outlets Settings', icon: Store, requirement: 'multi-outlet', permission: 'settings.manage', module: 'multi_outlet' },
+  { path: '/outlets/transfers', label: 'Inventory Transfers', icon: Package, requirement: 'multi-outlet', permission: 'inventory.manage', module: 'inventory_transfers' },
+  { path: '/outlets/analytics', label: 'Network Analytics', icon: BarChart3, requirement: 'multi-outlet', permission: 'reports.view', module: 'network_analytics' },
+  { path: '/outlets/menu-sync', label: 'Menu Sync Policy', icon: RefreshCw, requirement: 'multi-outlet', permission: 'menu.manage', module: 'menu_sync' },
+  { path: '/customers', label: 'Customers', icon: Users, permission: 'customers.manage', module: 'customers' },
+  { path: '/loyalty', label: 'Customer Loyalty', icon: Trophy, permission: 'customers.manage', module: 'loyalty' },
+  { path: '/ai-insights', label: 'AI Insights', icon: Brain, permission: 'reports.view', module: 'ai_insights' },
+  { path: '/integrations', label: 'Integrations', icon: Plug, permission: 'settings.manage', module: 'integrations' },
+  { path: '/order-alerts', label: 'Order Alerts', icon: BellRing, highlight: true, permission: 'orders.view', module: 'order_alerts' },
+  { path: '/reports', label: 'Reports', icon: BarChart3, permission: 'reports.view', module: 'basic_reports' },
+  { path: '/settings/users', label: 'User Management', icon: Users, permission: 'settings.manage', module: 'user_management' },
+  { path: '/settings/roles', label: 'Role Management', icon: Shield, permission: 'settings.manage', module: 'role_management' },
+  { path: '/crash-prevention', label: 'Crash Prevention', icon: ShieldCheck, permission: 'settings.manage', module: 'crash_prevention' },
+  { path: '/waste-management', label: 'Waste Management', icon: Leaf, permission: 'inventory.manage', module: 'waste_management' },
   { path: '/settings', label: 'Settings', icon: Settings, permission: 'settings.manage' },
 ]
 
@@ -60,6 +63,15 @@ export default function Sidebar() {
     if (!permission) return true;
     if (user?.role === 'superadmin') return true;
     return user?.permissions?.includes(permission) || user?.permissions?.includes('*');
+  };
+
+  // Check if the tenant's active plan includes a given module feature
+  const hasModule = (module) => {
+    if (!module) return true; // No module restriction = always visible
+    if (user?.role === 'superadmin') return true; // Superadmin sees everything
+    // If no plan features set at all (no subscription assigned), show everything as fallback
+    if (!user?.planFeatures || user.planFeatures.length === 0) return true;
+    return user.planFeatures.includes(module);
   };
 
   return (
@@ -128,6 +140,9 @@ export default function Sidebar() {
           
           // Hide if user lacks permission
           if (!hasPermission(item.permission)) return null;
+
+          // Hide if tenant's plan doesn't include this module
+          if (!hasModule(item.module)) return null;
           
           const isActive = location.pathname === item.path
           return (
