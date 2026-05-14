@@ -5,6 +5,7 @@ import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useTableStore from '@/store/tableStore'
 import { formatCurrency, cn } from '@/lib/utils'
+import useCounterId from '@/hooks/useCounterId'
 import { useState, useEffect } from 'react'
 
 export default function CartPanel() {
@@ -27,6 +28,7 @@ export default function CartPanel() {
   const [selectedDueOrders, setSelectedDueOrders] = useState([])
 
   const { orders, fetchOrders } = useOrderStore()
+  const counterId = useCounterId()
 
   useEffect(() => {
     fetchTables()
@@ -509,6 +511,7 @@ export default function CartPanel() {
                     const orderPayload = {
                       tableId: table ? table._id : undefined,
                       type: mappedType,
+                      counterId: counterId || undefined,
                       items: items.map(i => ({ 
                          menuItem: i._id || i.id, 
                          name: i.name,

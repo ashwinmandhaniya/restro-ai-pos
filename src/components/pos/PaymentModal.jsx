@@ -5,6 +5,7 @@ import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useCartStore from '@/store/cartStore'
 import useTenantSettingsStore from '@/store/tenantSettingsStore' // New store import
+import useCounterId from '@/hooks/useCounterId'
 import { formatCurrency, generateOrderId } from '@/lib/utils'
 
 const paymentMethods = [
@@ -21,6 +22,7 @@ export default function PaymentModal() {
     items, table, orderType, clearCart, activeOrderId 
   } = useCartStore()
   const { restaurantSettings } = useTenantSettingsStore() // Get dynamic settings
+  const counterId = useCounterId()
   
   const [selectedMethod, setSelectedMethod] = useState('cash')
   const [cashReceived, setCashReceived] = useState('')
@@ -45,6 +47,7 @@ export default function PaymentModal() {
       const orderPayload = {
         tableId: table ? table._id : undefined,
         type: mappedType,
+        counterId: counterId || undefined,
         items: items.map(i => ({ 
            menuItem: i._id || i.id, 
            name: i.name,

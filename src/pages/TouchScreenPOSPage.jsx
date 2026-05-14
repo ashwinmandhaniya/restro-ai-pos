@@ -12,6 +12,7 @@ import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useTableStore from '@/store/tableStore'
 import { formatCurrency, cn } from '@/lib/utils'
+import useCounterId from '@/hooks/useCounterId'
 import PaymentModal from '@/components/pos/PaymentModal'
 
 /* ─────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default function TouchScreenPOSPage() {
   const { addNotification, showPaymentModal, setShowPaymentModal, setShowVoiceBilling } = useUIStore()
   const { tables, fetchTables } = useTableStore()
   const { orders, fetchOrders } = useOrderStore()
+  const counterId = useCounterId()
 
   useEffect(() => {
     fetchMenuData()
@@ -121,6 +123,7 @@ export default function TouchScreenPOSPage() {
       await useOrderStore.getState().createOrder({
         tableId,
         type: oType,
+        counterId: counterId || undefined,
         items: cartItems.map(i => ({
           menuItem: i._id || i.id,
           name: i.name,
