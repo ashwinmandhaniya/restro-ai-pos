@@ -64,6 +64,16 @@ class ClientCache {
 
 const clientCache = new ClientCache();
 
+// Build cache key from URL + query params to avoid collisions
+function cacheKey(config) {
+  let key = config.url || '';
+  if (config.params && Object.keys(config.params).length > 0) {
+    const sorted = Object.entries(config.params).sort(([a],[b]) => a.localeCompare(b));
+    key += '?' + sorted.map(([k,v]) => `${k}=${v}`).join('&');
+  }
+  return key;
+}
+
 // Base API instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -87,7 +97,7 @@ api.interceptors.request.use(
 
     // Client-side cache: intercept GET requests
     if (config.method === 'get' && !config._skipCache) {
-      const cached = clientCache.get(config.url);
+      const cached = clientCache.get(cacheKey(config));
       if (cached && !cached.isStale) {
         // Fresh cache → return immediately via adapter override
         config.adapter = () => Promise.resolve({
@@ -116,7 +126,7 @@ api.interceptors.response.use(
     // Cache GET responses
     if (response.config.method === 'get' && response.status >= 200 && response.status < 300) {
       if (!response.headers?.['x-client-cache']) {
-        clientCache.set(response.config.url, response.data);
+        clientCache.set(cacheKey(response.config), response.data);
       }
     }
 

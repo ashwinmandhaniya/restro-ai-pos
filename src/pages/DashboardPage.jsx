@@ -214,27 +214,37 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-semibold text-surface-900 dark:text-white">Revenue Overview</h3>
-              <p className="text-xs text-surface-500 mt-0.5">Weekly revenue trend</p>
+              <p className="text-xs text-surface-500 mt-0.5">
+                {chartPeriod === 'today' ? 'Last 7 days trend' : chartPeriod === 'week' ? 'This week\'s revenue' : chartPeriod === 'month' ? 'Last 30 days revenue' : 'Custom range revenue'}
+              </p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={dashboardData.weeklyRevenue}>
-              <defs>
-                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f9162b" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#f9162b" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-surface-100 dark:text-surface-800" />
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="currentColor" className="text-surface-400" />
-              <YAxis tick={{ fontSize: 12 }} stroke="currentColor" className="text-surface-400" tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ background: 'var(--tooltip-bg, #1e293b)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '12px' }}
-                formatter={(value) => [formatCurrency(value), 'Revenue']}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#f9162b" strokeWidth={3} fill="url(#revenueGradient)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {dashboardData.weeklyRevenue.some(d => d.revenue > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={dashboardData.weeklyRevenue}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f9162b" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#f9162b" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-surface-100 dark:text-surface-800" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="currentColor" className="text-surface-400" />
+                <YAxis tick={{ fontSize: 12 }} stroke="currentColor" className="text-surface-400" tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                <Tooltip
+                  contentStyle={{ background: 'var(--tooltip-bg, #1e293b)', border: 'none', borderRadius: '12px', color: 'white', fontSize: '12px' }}
+                  formatter={(value) => [formatCurrency(value), 'Revenue']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#f9162b" strokeWidth={3} fill="url(#revenueGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[280px] text-surface-400">
+              <IndianRupee className="w-10 h-10 mb-2 opacity-30" />
+              <p className="text-sm font-medium">No revenue data</p>
+              <p className="text-xs mt-1 italic">No completed orders in this period</p>
+            </div>
+          )}
         </div>
 
         {/* Payment Breakdown */}
@@ -274,7 +284,7 @@ export default function DashboardPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-[260px] text-surface-400 italic text-xs">
-              No payments today yet
+              No payment data for this period
             </div>
           )}
         </div>
