@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Calendar, Filter, FileText, Download, X, Printer, RotateCcw, ChevronRight, Eye } from 'lucide-react'
 import useOrderStore from '@/store/orderStore'
 import useUIStore from '@/store/uiStore'
+import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import { cn, formatCurrency } from '@/lib/utils'
 
 const statusConfig = {
@@ -20,6 +21,7 @@ export default function OrderHistoryPage() {
 
   const { orders, fetchOrders, updateOrder, isLoading } = useOrderStore()
   const { addNotification, confirmAction } = useUIStore()
+  const { restaurantSettings } = useTenantSettingsStore()
 
   useEffect(() => {
     // Fetch specifically completed and cancelled orders if API allowed it.
@@ -271,8 +273,20 @@ export default function OrderHistoryPage() {
 
               <div className="flex-1 overflow-y-auto p-6 printable-receipt">
                 <div className="text-center mb-6 border-b border-dashed border-surface-300 dark:border-surface-700 pb-6">
-                  <h3 className="text-xl font-bold dark:text-white">RECEIPT</h3>
-                  <p className="text-sm text-surface-500 mt-1">
+                  {restaurantSettings?.settings?.billSettings?.showLogo && (restaurantSettings?.settings?.billSettings?.logoUrl || restaurantSettings?.branding?.logo) && (
+                    <img 
+                      src={restaurantSettings?.settings?.billSettings?.logoUrl || restaurantSettings?.branding?.logo} 
+                      alt="Logo" 
+                      className="w-12 h-12 object-contain mx-auto mb-2 grayscale" 
+                    />
+                  )}
+                  <h3 className="text-xl font-bold dark:text-white">
+                    {restaurantSettings?.settings?.billSettings?.brandName || restaurantSettings?.name || 'RECEIPT'}
+                  </h3>
+                  <p className="text-xs text-surface-500 mt-1 opacity-80">
+                    {restaurantSettings?.settings?.billSettings?.headerText}
+                  </p>
+                  <p className="text-sm text-surface-500 mt-2 font-mono">
                     Order #{selectedOrder.orderId || selectedOrder._id.slice(-6).toUpperCase()}
                   </p>
                   <p className="text-xs text-surface-500 mt-0.5">

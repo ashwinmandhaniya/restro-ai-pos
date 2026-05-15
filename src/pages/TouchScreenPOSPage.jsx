@@ -924,12 +924,24 @@ export default function TouchScreenPOSPage() {
                     onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })}
                   />
                 </div>
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block dark:text-surface-300">
+                    Email ID <span className="text-surface-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. john@example.com"
+                    className="w-full px-4 py-3.5 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-base font-medium outline-none focus:ring-2 focus:ring-primary-500/30 transition-all"
+                    value={customerForm.email || ''}
+                    onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })}
+                  />
+                </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => {
                       setCustomer(null)
-                      setCustomerForm({ name: '', phone: '' })
+                      setCustomerForm({ name: '', phone: '', email: '' })
                       setShowCustomerModal(false)
                     }}
                     className="flex-1 py-3.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-500 font-bold text-sm hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 transition-all"

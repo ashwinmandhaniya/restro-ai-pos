@@ -19,7 +19,7 @@ export default function PaymentModal() {
   const { setShowPaymentModal, addNotification } = useUIStore()
   const { 
     getTotal, getSubtotal, getDiscountAmount, getTax, getItemCount, 
-    items, table, orderType, clearCart, activeOrderId 
+    items, table, customer, orderType, clearCart, activeOrderId 
   } = useCartStore()
   const { restaurantSettings } = useTenantSettingsStore() // Get dynamic settings
   const counterId = useCounterId()
@@ -47,6 +47,9 @@ export default function PaymentModal() {
       const orderPayload = {
         tableId: table ? table._id : undefined,
         type: mappedType,
+        customerName: customer?.name || undefined,
+        customerPhone: customer?.phone || undefined,
+        customerEmail: customer?.email || undefined,
         counterId: counterId || undefined,
         items: items.map(i => ({ 
            menuItem: i._id || i.id, 

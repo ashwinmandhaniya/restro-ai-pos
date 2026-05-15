@@ -27,7 +27,10 @@ export default function Header() {
   }, [])
 
   return (
-    <header className="h-16 border-b border-surface-100 dark:border-surface-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-30">
+    <header 
+      className="h-16 border-b border-surface-100 dark:border-surface-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur-md flex items-center justify-between px-6 sticky z-30 transition-all duration-200"
+      style={{ top: 'var(--offline-banner-height, 0px)' }}
+    >
       {/* Left: Search */}
       <div className="flex items-center gap-4 flex-1">
         <div className="relative max-w-md w-full">

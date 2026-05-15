@@ -7,6 +7,7 @@ import useUIStore from '@/store/uiStore'
 import useAuthStore from '@/store/authStore'
 import useOrderStore from '@/store/orderStore'
 import useTableStore from '@/store/tableStore'
+import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import VoiceBilling from '@/components/ai/VoiceBilling'
 import OwnerCopilot from '@/components/ai/OwnerCopilot'
 import NotificationToast from '@/components/ui/NotificationToast'
@@ -19,9 +20,13 @@ export default function AppLayout() {
   const { sidebarCollapsed, showVoiceBilling, showCopilot, addNotification } = useUIStore()
   const { token } = useAuthStore()
   const location = useLocation()
+  const { fetchSettings } = useTenantSettingsStore()
 
   useEffect(() => {
     if (token) {
+      // Fetch core global settings
+      fetchSettings().catch(err => console.error("Failed to load settings:", err));
+
       socketClient.connect(token);
       
       socketClient.on('new_order', (order) => {
@@ -84,7 +89,7 @@ export default function AppLayout() {
   }, [token, addNotification]);
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-950">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-950 transition-all duration-200" style={{ paddingTop: 'var(--offline-banner-height, 0px)' }}>
       <NetworkStatus />
       <Sidebar />
       <main

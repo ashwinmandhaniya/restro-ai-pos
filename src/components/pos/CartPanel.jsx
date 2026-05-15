@@ -281,10 +281,16 @@ export default function CartPanel() {
                   <label className="text-xs font-medium mb-1 block dark:text-surface-300">Phone</label>
                   <input placeholder="e.g. 9876543210" className="input text-sm py-2" value={customerForm.phone} onChange={e => setCustomerForm({...customerForm, phone: e.target.value})} />
                 </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block dark:text-surface-300">
+                    Email ID <span className="text-surface-400 font-normal">(Optional)</span>
+                  </label>
+                  <input type="email" placeholder="e.g. john@example.com" className="input text-sm py-2" value={customerForm.email || ''} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} />
+                </div>
                 <div className="flex gap-2 mt-4">
                   <button type="button" onClick={() => {
                     useCartStore.getState().setCustomer(null)
-                    setCustomerForm({name: '', phone: ''})
+                    setCustomerForm({name: '', phone: '', email: ''})
                     setShowCustomerModal(false)
                   }} className="btn-secondary flex-1 text-red-500 hover:border-red-200 hover:bg-red-50">Clear</button>
                   <button type="submit" className="btn-primary flex-1">Save</button>

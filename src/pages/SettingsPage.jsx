@@ -506,7 +506,10 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="pt-6 border-t border-surface-100 dark:border-surface-800">
-                    <h3 className="text-sm font-bold text-surface-900 dark:text-white mb-4">Payment History</h3>
+                    <div className="mb-4">
+                      <h3 className="text-sm font-bold text-surface-900 dark:text-white">Subscription Payment History</h3>
+                      <p className="text-xs text-surface-500 mt-1">Invoices and payments for your software subscription.</p>
+                    </div>
                     <div className="overflow-x-auto -mx-6 bg-surface-50/50 dark:bg-surface-800/20 border-y border-surface-100 dark:border-surface-800">
                       <table className="w-full text-left text-xs text-surface-600 dark:text-surface-400">
                         <thead className="bg-surface-50 dark:bg-surface-800/50 text-surface-500 uppercase tracking-wider">
@@ -535,9 +538,9 @@ export default function SettingsPage() {
                           ) : (
                             tenantInvoices.map((inv) => (
                               <tr key={inv._id} className="bg-white dark:bg-transparent">
-                                <td className="px-6 py-3 font-medium text-surface-900 dark:text-white">{inv.invoiceNumber}</td>
-                                <td className="px-6 py-3">{format(new Date(inv.issueDate), 'MMM dd, yyyy')}</td>
-                                <td className="px-6 py-3 font-bold text-surface-900 dark:text-white">₹{inv.total.toLocaleString()}</td>
+                                <td className="px-6 py-3 font-medium text-surface-900 dark:text-white">{inv.invoiceNumber || 'N/A'}</td>
+                                <td className="px-6 py-3">{inv.issueDate ? format(new Date(inv.issueDate), 'MMM dd, yyyy') : 'N/A'}</td>
+                                <td className="px-6 py-3 font-bold text-surface-900 dark:text-white">₹{(inv.total || 0).toLocaleString()}</td>
                                 <td className="px-6 py-3">
                                   {inv.status === 'paid' && <span className="text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Paid</span>}
                                   {inv.status === 'overdue' && <span className="text-red-600 dark:text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Overdue</span>}
@@ -548,11 +551,13 @@ export default function SettingsPage() {
                                     className="p-1 px-2 text-[10px] font-bold uppercase rounded-md border border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 transition"
                                     onClick={() => {
                                       // Simple CSV export for now
-                                      const csvContent = "data:text/csv;charset=utf-8," + "Invoice #,Date,Amount,Status\n" + `${inv.invoiceNumber},${format(new Date(inv.issueDate), 'yyyy-MM-dd')},${inv.total},${inv.status}`;
+                                      const safeDate = inv.issueDate ? format(new Date(inv.issueDate), 'yyyy-MM-dd') : 'N/A';
+                                      const safeTotal = inv.total || 0;
+                                      const csvContent = "data:text/csv;charset=utf-8," + "Invoice #,Date,Amount,Status\n" + `${inv.invoiceNumber || 'N/A'},${safeDate},${safeTotal},${inv.status || 'N/A'}`;
                                       const encodedUri = encodeURI(csvContent);
                                       const link = document.createElement("a");
                                       link.setAttribute("href", encodedUri);
-                                      link.setAttribute("download", `invoice_${inv.invoiceNumber}.csv`);
+                                      link.setAttribute("download", `invoice_${inv.invoiceNumber || 'export'}.csv`);
                                       document.body.appendChild(link);
                                       link.click();
                                       document.body.removeChild(link);

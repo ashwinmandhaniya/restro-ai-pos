@@ -22,6 +22,16 @@ export default function NetworkStatus() {
     return unsub
   }, [])
 
+  useEffect(() => {
+    const isBannerVisible = showBanner || !state.isOnline || state.isSyncing || state.pendingCount > 0;
+    if (isBannerVisible) {
+      document.documentElement.style.setProperty('--offline-banner-height', '40px');
+    } else {
+      document.documentElement.style.setProperty('--offline-banner-height', '0px');
+    }
+    return () => document.documentElement.style.setProperty('--offline-banner-height', '0px');
+  }, [showBanner, state.isOnline, state.isSyncing, state.pendingCount]);
+
   // Don't render if everything is fine
   if (state.isOnline && !showBanner && !state.isSyncing && state.pendingCount === 0) return null
 

@@ -80,9 +80,13 @@ export default function Sidebar() {
       animate={{ width: sidebarCollapsed ? 72 : 256 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className={cn(
-        'fixed left-0 top-0 h-screen z-40 flex flex-col border-r',
+        'fixed left-0 h-screen z-40 flex flex-col border-r transition-all duration-200',
         'bg-white dark:bg-surface-900 border-surface-100 dark:border-surface-800'
       )}
+      style={{ 
+        top: 'var(--offline-banner-height, 0px)',
+        height: 'calc(100vh - var(--offline-banner-height, 0px))'
+      }}
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-surface-100 dark:border-surface-800">
