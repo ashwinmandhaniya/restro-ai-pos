@@ -232,7 +232,7 @@ export default function TablesPage() {
           </button>
           <button onClick={() => {
             setEditingTableId(null)
-            setTableForm({ name: '', capacity: 4, floor: selectedFloor, category: null })
+            setTableForm({ name: '', capacity: 4, floor: selectedFloor, category: selectedCategory === 'all' ? null : selectedCategory })
             setShowAddModal(true)
           }} className="btn-primary btn-sm">
             <Plus className="w-4 h-4 mr-1.5" /> Add Table
