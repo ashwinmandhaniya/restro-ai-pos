@@ -14,9 +14,10 @@ import { cn } from '@/lib/utils'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import useTenantInvoiceStore from '@/store/tenantInvoiceStore'
-import { CheckCircle, XCircle, AlertCircle, Clock as ClockIcon, FileText as FileTextIcon, RotateCcw } from 'lucide-react'
+import { CheckCircle, XCircle, AlertCircle, Clock as ClockIcon, FileText as FileTextIcon, RotateCcw, UploadCloud, Loader2 } from 'lucide-react'
 import useKeyboardStore from '@/store/keyboardStore'
 import { sessionManager } from '@/lib/security'
+import api from '@/lib/api'
 
 // No longer hardcoded - we will build this dynamically based on store data
 const SECTIONS = [
@@ -94,6 +95,49 @@ export default function SettingsPage() {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
+    if (!validTypes.includes(file.type)) {
+      addNotification({ type: 'error', title: 'Invalid File', message: 'Please upload a valid image (JPG, PNG, WEBP, SVG).' })
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      addNotification({ type: 'error', title: 'File Too Large', message: 'Logo image must be less than 2MB.' })
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const formDataUpload = new FormData()
+      formDataUpload.append('image', file)
+      formDataUpload.append('folder', 'logos')
+
+      const response = await api.post('/upload', formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      if (response.data.success) {
+        handleInputChange('logoUrl', response.data.data.url)
+        addNotification({ type: 'success', title: 'Upload Successful', message: 'Logo uploaded successfully.' })
+      } else {
+        throw new Error(response.data.message || 'Upload failed')
+      }
+    } catch (err) {
+      console.error(err)
+      addNotification({ type: 'error', title: 'Upload Failed', message: err.message || 'Could not upload image.' })
+    } finally {
+      setIsUploading(false)
+      // Reset input so the same file can be selected again if needed
+      e.target.value = ''
+    }
   }
 
   const handleSave = async () => {
@@ -232,11 +276,26 @@ export default function SettingsPage() {
 
                          {formData.showLogo && (
                            <div className="grid gap-2">
-                              <label className="text-xs font-bold text-surface-500 uppercase tracking-widest">Logo URL</label>
-                              <div className="flex gap-2">
-                                <input type="text" value={formData.logoUrl} onChange={(e) => handleInputChange('logoUrl', e.target.value)} className="input text-xs" placeholder="https://..." />
-                                <div className="w-10 h-10 rounded bg-surface-100 flex items-center justify-center overflow-hidden flex-shrink-0 border">
-                                  {formData.logoUrl ? <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-surface-400" />}
+                              <label className="text-xs font-bold text-surface-500 uppercase tracking-widest">Restaurant Logo</label>
+                              <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-surface-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-surface-200 dark:border-surface-700">
+                                  {formData.logoUrl ? <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <ImageIcon className="w-6 h-6 text-surface-400" />}
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex gap-2">
+                                    <label className="btn-secondary btn-sm cursor-pointer relative overflow-hidden flex-1 justify-center flex items-center gap-2">
+                                      {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                                      {isUploading ? 'Uploading...' : 'Upload Image'}
+                                      <input 
+                                        type="file" 
+                                        accept="image/jpeg, image/png, image/webp, image/svg+xml" 
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        onChange={handleLogoUpload}
+                                        disabled={isUploading}
+                                      />
+                                    </label>
+                                  </div>
+                                  <input type="text" value={formData.logoUrl} onChange={(e) => handleInputChange('logoUrl', e.target.value)} className="input text-xs w-full" placeholder="Or paste logo URL here..." />
                                 </div>
                               </div>
                            </div>
