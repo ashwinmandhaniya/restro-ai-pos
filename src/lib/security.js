@@ -326,6 +326,11 @@ export function sanitizeEmail(email) {
 ═══════════════════════════════════════════════════════════ */
 export function sanitizePayload(payload) {
   if (payload === null || payload === undefined) return payload;
+
+  // Never sanitize FormData or Blob — they contain binary file data (uploads)
+  // Object.entries() doesn't enumerate FormData, so sanitization would destroy it
+  if (typeof FormData !== 'undefined' && payload instanceof FormData) return payload;
+  if (typeof Blob !== 'undefined' && payload instanceof Blob) return payload;
   
   if (typeof payload === 'string') {
     // Basic sanitization: remove common XSS patterns like <script> or javascript:
