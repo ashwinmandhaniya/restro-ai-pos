@@ -311,12 +311,15 @@ export default function TablesPage() {
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-xs font-semibold text-surface-400 uppercase tracking-wide">Category:</span>
           <button onClick={() => setSelectedCategory('all')} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${selectedCategory === 'all' ? 'bg-surface-900 dark:bg-white text-white dark:text-surface-900' : 'bg-surface-100 dark:bg-surface-800 text-surface-500'}`}>All</button>
-          {categories.map(cat => (
-            <button key={cat._id} onClick={() => setSelectedCategory(cat._id)} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${selectedCategory === cat._id ? 'text-white shadow-lg' : 'bg-surface-100 dark:bg-surface-800 text-surface-600'}`} style={selectedCategory === cat._id ? { backgroundColor: cat.color } : {}}>
-              <span>{cat.icon}</span>{cat.name}
-              {cat.tableCount > 0 && <span className="opacity-70">({cat.tableCount})</span>}
-            </button>
-          ))}
+          {categories.map(cat => {
+            const countOnFloor = floorTables.filter(t => (t.category?._id || t.category) === cat._id).length;
+            return (
+              <button key={cat._id} onClick={() => setSelectedCategory(cat._id)} className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${selectedCategory === cat._id ? 'text-white shadow-lg' : 'bg-surface-100 dark:bg-surface-800 text-surface-600'}`} style={selectedCategory === cat._id ? { backgroundColor: cat.color } : {}}>
+                <span>{cat.icon}</span>{cat.name}
+                {countOnFloor > 0 && <span className="opacity-70">({countOnFloor})</span>}
+              </button>
+            );
+          })}
         </div>
       )}
 
