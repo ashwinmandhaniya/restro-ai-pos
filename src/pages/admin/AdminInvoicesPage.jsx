@@ -3,7 +3,7 @@ import useAdminTransactionStore from '@/store/adminTransactionStore';
 import {
   FileText, IndianRupee, Clock, Search, CheckCircle, XCircle,
   AlertCircle, RefreshCw, Receipt, Filter, Plus, X, ArrowUpRight,
-  ShoppingCart, RotateCcw, ArrowUp, ArrowDown, CreditCard, Banknote
+  ShoppingCart, RotateCcw, ArrowUp, ArrowDown, CreditCard, Banknote, Edit3
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,9 +54,13 @@ export default function AdminInvoicesPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [editTransactionObj, setEditTransactionObj] = useState(null);
   const [createForm, setCreateForm] = useState({
     type: 'plan_purchase', restaurantId: '', planId: '', amount: '',
     status: 'completed', paymentMethod: 'manual', billingCycle: 'monthly', notes: ''
+  });
+  const [editForm, setEditForm] = useState({
+    status: '', paymentMethod: '', gatewayTransactionId: '', notes: ''
   });
 
   useEffect(() => {
@@ -86,6 +90,25 @@ export default function AdminInvoicesPage() {
     e.preventDefault();
     const ok = await createTransaction({ ...createForm, amount: Number(createForm.amount) });
     if (ok) { setShowCreate(false); setCreateForm({ type: 'plan_purchase', restaurantId: '', planId: '', amount: '', status: 'completed', paymentMethod: 'manual', billingCycle: 'monthly', notes: '' }); }
+  };
+
+  const openEditModal = (txn) => {
+    setEditTransactionObj(txn);
+    setEditForm({
+      status: txn.status || '',
+      paymentMethod: txn.paymentMethod || '',
+      gatewayTransactionId: txn.gatewayTransactionId || '',
+      notes: txn.notes || ''
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const ok = await updateTransaction(editTransactionObj._id, editForm);
+    if (ok) {
+      setEditTransactionObj(null);
+      setEditForm({ status: '', paymentMethod: '', gatewayTransactionId: '', notes: '' });
+    }
   };
 
   const handleExportCSV = () => {
@@ -265,6 +288,10 @@ export default function AdminInvoicesPage() {
                               <RotateCcw size={17} />
                             </button>
                           )}
+                          <button title="Edit Transaction" onClick={() => openEditModal(txn)}
+                            className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all active:scale-90">
+                            <Edit3 size={17} />
+                          </button>
                         </div>
                       </td>
                     </motion.tr>
@@ -343,6 +370,49 @@ export default function AdminInvoicesPage() {
                   <textarea rows={2} placeholder="Optional description…" value={createForm.notes} onChange={e => setCreateForm({ ...createForm, notes: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none resize-none" /></div>
                 <button type="submit" className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-all">Create Transaction</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Transaction Modal */}
+      <AnimatePresence>
+        {editTransactionObj && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6">
+              <div className="flex justify-between mb-5">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Edit Transaction</h3>
+                  <p className="text-xs text-slate-400 mt-1">{editTransactionObj.transactionId}</p>
+                </div>
+                <button onClick={() => setEditTransactionObj(null)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-xs text-slate-400 mb-1 block">Status</label>
+                    <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none">
+                      {STATUS_OPTIONS.filter(o => o.value !== 'all').map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select></div>
+                  <div><label className="text-xs text-slate-400 mb-1 block">Payment Method</label>
+                    <select value={editForm.paymentMethod} onChange={e => setEditForm({ ...editForm, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none">
+                      <option value="manual">Manual</option><option value="upi">UPI</option><option value="razorpay">Razorpay</option>
+                      <option value="bank_transfer">Bank Transfer</option><option value="cash">Cash</option><option value="none">None</option>
+                    </select></div>
+                </div>
+                <div><label className="text-xs text-slate-400 mb-1 block">Gateway Transaction ID</label>
+                  <input placeholder="e.g. pay_XXXXX" value={editForm.gatewayTransactionId} onChange={e => setEditForm({ ...editForm, gatewayTransactionId: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none font-mono" /></div>
+                <div><label className="text-xs text-slate-400 mb-1 block">Notes</label>
+                  <textarea rows={2} placeholder="Optional description…" value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:border-violet-500 focus:outline-none resize-none" /></div>
+                <div className="flex justify-end gap-3 pt-2">
+                   <button type="button" onClick={() => setEditTransactionObj(null)} className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-semibold transition-all">Cancel</button>
+                   <button type="submit" className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-all">Update Transaction</button>
+                </div>
               </form>
             </motion.div>
           </div>
