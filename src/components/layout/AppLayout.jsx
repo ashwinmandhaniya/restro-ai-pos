@@ -15,6 +15,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import KeyboardShortcuts from '@/components/ui/KeyboardShortcuts'
 import NetworkStatus from '@/components/ui/NetworkStatus'
 import socketClient from '@/lib/socket'
+import SubscriptionBanner from '@/components/ui/SubscriptionBanner'
 
 export default function AppLayout() {
   const { sidebarCollapsed, showVoiceBilling, showCopilot, addNotification } = useUIStore()
@@ -91,6 +92,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 transition-all duration-200" style={{ paddingTop: 'var(--offline-banner-height, 0px)' }}>
       <NetworkStatus />
+      <SubscriptionBanner />
       <Sidebar />
       <main
         className="transition-all duration-200"
