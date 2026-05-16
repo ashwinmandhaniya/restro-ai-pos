@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageCircle, ArrowLeft, Save, Check, AlertCircle,
-  Smartphone, Key, Globe, Bell, Loader2, Wifi, WifiOff, ChevronRight
+  Smartphone, Key, Globe, Bell, Loader2, Wifi, WifiOff, Send, Phone
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
@@ -23,9 +23,12 @@ const templateEvents = [
 ]
 
 const autoNotifyEvents = [
-  { key: 'onOrderPlaced', label: 'Order Placed', desc: 'Send confirmation when customer places an order', emoji: '✅' },
-  { key: 'onOrderReady',  label: 'Order Ready',  desc: 'Notify when food is ready for pickup/serve',     emoji: '🔔' },
-  { key: 'onOrderServed', label: 'Order Served', desc: 'Send thank-you message after serving',           emoji: '🎉' },
+  { key: 'onOrderPlaced',            label: 'Order Placed',              desc: 'Send confirmation when customer places an order',          emoji: '✅' },
+  { key: 'onOrderReady',             label: 'Order Ready',               desc: 'Notify when food is ready for pickup/serve',               emoji: '🔔' },
+  { key: 'onOrderServed',            label: 'Order Served',              desc: 'Send thank-you message after serving',                    emoji: '🎉' },
+  { key: 'onOrderFeedback',          label: 'Order Feedback',            desc: 'Request Google Maps review 1 hour after completion',       emoji: '⭐' },
+  { key: 'onReservationConfirmed',   label: 'Reservation Confirmed',     desc: 'Notify customer when table reservation is confirmed',      emoji: '📅' },
+  { key: 'onReservationReminder',    label: 'Reservation Reminder',      desc: 'Send reminder 60 min before reserved time',               emoji: '⏰' },
 ]
 
 function Toggle({ value, onChange }) {
@@ -95,6 +98,8 @@ export default function WhatsAppSettingsPage() {
   const { addNotification } = useUIStore()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [testPhone, setTestPhone] = useState('')
+  const [isTesting, setIsTesting] = useState(false)
   const [settings, setSettings] = useState({
     enabled: false,
     provider: 'none',
@@ -107,7 +112,14 @@ export default function WhatsAppSettingsPage() {
       orderReady:        { name: 'order_ready',     body: "🔔 *Your Order is Ready!*\n\nOrder ID: *{{orderId}}*\n\nPlease collect your order. Enjoy your meal! 😊" },
       orderCompleted:    { name: 'order_completed', body: "🎉 *Thank you for dining with us!*\n\nOrder ID: *{{orderId}}*\nTotal: ₹{{total}}\n\nWe hope you enjoyed your meal. See you again soon! ❤️" }
     },
-    autoNotify: { onOrderPlaced: true, onOrderReady: true, onOrderServed: false }
+    autoNotify: {
+      onOrderPlaced: true,
+      onOrderReady: true,
+      onOrderServed: false,
+      onOrderFeedback: true,
+      onReservationConfirmed: true,
+      onReservationReminder: true
+    }
   })
 
   useEffect(() => {
@@ -136,6 +148,27 @@ export default function WhatsAppSettingsPage() {
       addNotification({ type: 'error', title: 'Save Failed', message: err.response?.data?.message || err.message })
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleTestMessage = async () => {
+    const phone = testPhone.trim()
+    if (!phone || phone.length < 10) {
+      addNotification({ type: 'error', title: 'Invalid Phone', message: 'Enter a valid phone number with country code (e.g. 919876543210)' })
+      return
+    }
+    setIsTesting(true)
+    try {
+      const res = await api.post('/whatsapp/test-message', { phone })
+      if (res.data.success) {
+        addNotification({ type: 'success', title: 'Test Sent! 📱', message: 'Check your WhatsApp — test message delivered.' })
+      } else {
+        addNotification({ type: 'error', title: 'Test Failed', message: res.data.message || 'Message not delivered.' })
+      }
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Test Error', message: err.response?.data?.message || err.message })
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -402,7 +435,7 @@ export default function WhatsAppSettingsPage() {
                     </div>
                   </div>
                   <Toggle
-                    value={settings.autoNotify[item.key]}
+                    value={settings.autoNotify[item.key] ?? false}
                     onChange={v => updateField(`autoNotify.${item.key}`, v)}
                   />
                 </div>
@@ -410,7 +443,64 @@ export default function WhatsAppSettingsPage() {
             </div>
           </Card>
 
-          {/* 6. Connection Status */}
+          {/* 6. Test Message */}
+          <AnimatePresence>
+            {isConnected && (
+              <motion.div
+                key="test-msg"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: 0.05 } }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Card>
+                  <CardHeader
+                    icon={<Send className="w-4 h-4 text-violet-500" />}
+                    title="Send Test Message"
+                    description="Verify your API credentials by sending a live test notification"
+                  />
+                  <div className="p-4">
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-surface-500 uppercase tracking-wide mb-1.5">
+                          Phone Number (with country code)
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                          <input
+                            id="wa-test-phone"
+                            type="tel"
+                            placeholder="91XXXXXXXXXX"
+                            value={testPhone}
+                            onChange={e => setTestPhone(e.target.value.replace(/\D/g, ''))}
+                            maxLength={15}
+                            className="w-full pl-9 pr-4 py-2.5 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 focus:border-violet-500 dark:focus:border-violet-400 text-surface-900 dark:text-white placeholder-surface-400 rounded-xl outline-none transition-colors text-sm"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        id="wa-send-test-btn"
+                        onClick={handleTestMessage}
+                        disabled={isTesting || !testPhone || testPhone.length < 10}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#1ebe5d] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-[#25D366]/20"
+                      >
+                        {isTesting
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Send className="w-4 h-4" />
+                        }
+                        {isTesting ? 'Sending…' : 'Send Test'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-surface-400 mt-2">
+                      Uses the "Order Confirmation" template with a test order ID. Message will be sent via your configured provider.
+                    </p>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 7. Connection Status */}
           <Card>
             <div className="flex items-center gap-4 p-5">
               <div className={cn(
