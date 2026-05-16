@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, CreditCard, Smartphone, Banknote, Wallet, Check, Printer, Share2, SplitSquareHorizontal } from 'lucide-react'
 import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useCartStore from '@/store/cartStore'
-import useTenantSettingsStore from '@/store/tenantSettingsStore' // New store import
+import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import useCounterId from '@/hooks/useCounterId'
 import { formatCurrency, generateOrderId } from '@/lib/utils'
+import api from '@/lib/api'
 
 const paymentMethods = [
   { id: 'cash', label: 'Cash', icon: Banknote, color: 'bg-green-500' },
@@ -34,6 +35,15 @@ export default function PaymentModal() {
 
   const total = getTotal()
   const change = cashReceived ? parseFloat(cashReceived) - total : 0
+
+  // Fetch default printer config on mount
+  const [defaultPrinter, setDefaultPrinter] = useState(null)
+  useEffect(() => {
+    api.get('/printers').then(({ data }) => {
+      const def = data.find(p => p.isDefault) || data[0]
+      if (def) setDefaultPrinter(def)
+    }).catch(() => {})
+  }, [])
 
   const { createOrder, updateOrder } = useOrderStore()
 
@@ -90,6 +100,13 @@ export default function PaymentModal() {
   }
   
   const handlePrint = () => {
+    // Set dynamic receipt width from default printer's paper size
+    const paperWidthMap = {
+      '58mm': '58mm', '80mm': '80mm', 'A4': '210mm', 'A5': '148mm',
+      'A6': '105mm', 'Label (40×30)': '40mm', 'Label (60×40)': '60mm', 'Custom': '80mm'
+    }
+    const width = paperWidthMap[defaultPrinter?.paperSize] || '80mm'
+    document.documentElement.style.setProperty('--receipt-width', width)
     window.print()
   }
 

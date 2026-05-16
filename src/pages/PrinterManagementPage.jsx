@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Printer, Plus, Search, Wifi, Usb, Bluetooth, Network, Settings, Trash2,
   Edit3, X, CheckCircle, XCircle, Zap, FileText, Receipt, Tag,
   Monitor, ToggleLeft, ToggleRight, TestTube, ChevronRight, AlertCircle,
-  Copy, RefreshCw, Signal, HardDrive, Info
+  Copy, RefreshCw, Signal, HardDrive, Info, Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import useUIStore from '@/store/uiStore'
+import api from '@/lib/api'
 
 /* ─────────────────────────────────────────────────────────
    PRINTER TYPE CONFIGS
@@ -37,52 +38,11 @@ const PRINT_PURPOSES = [
 ]
 
 /* ─────────────────────────────────────────────────────────
-   MOCK PRINTERS
-───────────────────────────────────────────────────────── */
-const INITIAL_PRINTERS = [
-  {
-    id: 1, name: 'POS Counter Printer', model: 'Epson TM-T82X', connection: 'usb',
-    type: 'thermal', paperSize: '80mm', status: 'online', isDefault: true,
-    purposes: ['bill', 'kot'], ip: '', port: '', copies: 1, autoPrint: true, autoKOT: true,
-    cutPaper: true, printLogo: true, fontSize: 'medium'
-  },
-  {
-    id: 2, name: 'Kitchen KOT Printer', model: 'Star TSP143III', connection: 'lan',
-    type: 'thermal', paperSize: '80mm', status: 'online', isDefault: false,
-    purposes: ['kot'], ip: '192.168.1.101', port: '9100', copies: 2, autoPrint: true, autoKOT: true,
-    cutPaper: true, printLogo: false, fontSize: 'large'
-  },
-  {
-    id: 3, name: 'Bar Printer', model: 'Bixolon SRP-350III', connection: 'wifi',
-    type: 'thermal', paperSize: '58mm', status: 'online', isDefault: false,
-    purposes: ['kot'], ip: '192.168.1.102', port: '9100', copies: 1, autoPrint: true, autoKOT: true,
-    cutPaper: true, printLogo: false, fontSize: 'medium'
-  },
-  {
-    id: 4, name: 'Office Laser', model: 'HP LaserJet Pro M404', connection: 'wifi',
-    type: 'laser', paperSize: 'A4', status: 'online', isDefault: false,
-    purposes: ['report'], ip: '192.168.1.200', port: '', copies: 1, autoPrint: false, autoKOT: false,
-    cutPaper: false, printLogo: true, fontSize: 'medium'
-  },
-  {
-    id: 5, name: 'Label Printer', model: 'Zebra ZD421', connection: 'usb',
-    type: 'label', paperSize: 'Label (40×30)', status: 'offline', isDefault: false,
-    purposes: ['label'], ip: '', port: '', copies: 1, autoPrint: false, autoKOT: false,
-    cutPaper: false, printLogo: false, fontSize: 'small'
-  },
-  {
-    id: 6, name: 'Backup Dot Matrix', model: 'Epson LQ-310', connection: 'usb',
-    type: 'dotmatrix', paperSize: 'A5', status: 'offline', isDefault: false,
-    purposes: ['bill'], ip: '', port: '', copies: 1, autoPrint: false, autoKOT: false,
-    cutPaper: false, printLogo: false, fontSize: 'medium'
-  },
-]
-
-/* ─────────────────────────────────────────────────────────
    COMPONENT
 ───────────────────────────────────────────────────────── */
 export default function PrinterManagementPage() {
-  const [printers, setPrinters] = useState(INITIAL_PRINTERS)
+  const [printers, setPrinters] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterConn, setFilterConn] = useState('all')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -97,6 +57,20 @@ export default function PrinterManagementPage() {
 
   const { addNotification, confirmAction } = useUIStore()
 
+  // ── Fetch printers from backend ─────────────────────────
+  const fetchPrinters = useCallback(async () => {
+    try {
+      const { data } = await api.get('/printers')
+      setPrinters(data)
+    } catch (err) {
+      console.error('[Printers] Fetch error:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchPrinters() }, [fetchPrinters])
+
   const online = printers.filter(p => p.status === 'online').length
   const filtered = printers.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.model.toLowerCase().includes(search.toLowerCase())
@@ -110,19 +84,24 @@ export default function PrinterManagementPage() {
     cutPaper: true, printLogo: true, fontSize: 'medium'
   })
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
-    if (editPrinter) {
-      setPrinters(printers.map(p => p.id === editPrinter.id ? { ...p, ...form, status: p.status } : p))
-      addNotification({ type: 'success', title: 'Printer Updated', message: form.name })
-    } else {
-      const newPrinter = { id: Date.now(), ...form, status: 'offline', isDefault: printers.length === 0 }
-      setPrinters([...printers, newPrinter])
-      addNotification({ type: 'success', title: 'Printer Added', message: `${form.name} registered` })
+    try {
+      if (editPrinter) {
+        const { data } = await api.put(`/printers/${editPrinter._id}`, form)
+        setPrinters(prev => prev.map(p => p._id === data._id ? data : p))
+        addNotification({ type: 'success', title: 'Printer Updated', message: form.name })
+      } else {
+        const { data } = await api.post('/printers', form)
+        setPrinters(prev => [...prev, data])
+        addNotification({ type: 'success', title: 'Printer Added', message: `${form.name} registered` })
+      }
+      setShowAddModal(false)
+      setEditPrinter(null)
+      resetForm()
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Save Failed', message: err.response?.data?.message || err.message })
     }
-    setShowAddModal(false)
-    setEditPrinter(null)
-    resetForm()
   }
 
   const handleEdit = (printer) => {
@@ -140,19 +119,39 @@ export default function PrinterManagementPage() {
   const handleDelete = async (printer) => {
     const ok = await confirmAction({ title: 'Remove Printer', message: `Remove "${printer.name}"?`, confirmText: 'Remove' })
     if (ok) {
-      setPrinters(printers.filter(p => p.id !== printer.id))
-      if (selectedPrinter?.id === printer.id) setSelectedPrinter(null)
-      addNotification({ type: 'success', title: 'Printer Removed', message: printer.name })
+      try {
+        await api.delete(`/printers/${printer._id}`)
+        setPrinters(prev => prev.filter(p => p._id !== printer._id))
+        if (selectedPrinter?._id === printer._id) setSelectedPrinter(null)
+        addNotification({ type: 'success', title: 'Printer Removed', message: printer.name })
+        // Refresh to pick up any auto-promoted default
+        fetchPrinters()
+      } catch (err) {
+        addNotification({ type: 'error', title: 'Delete Failed', message: err.response?.data?.message || err.message })
+      }
     }
   }
 
-  const handleSetDefault = (id) => {
-    setPrinters(printers.map(p => ({ ...p, isDefault: p.id === id })))
-    addNotification({ type: 'success', title: 'Default Printer Set' })
+  const handleSetDefault = async (id) => {
+    try {
+      await api.put(`/printers/${id}/default`)
+      setPrinters(prev => prev.map(p => ({ ...p, isDefault: p._id === id })))
+      addNotification({ type: 'success', title: 'Default Printer Set' })
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    }
   }
 
-  const toggleStatus = (id) => {
-    setPrinters(printers.map(p => p.id === id ? { ...p, status: p.status === 'online' ? 'offline' : 'online' } : p))
+  const toggleStatus = async (id) => {
+    const printer = printers.find(p => p._id === id)
+    if (!printer) return
+    const newStatus = printer.status === 'online' ? 'offline' : 'online'
+    try {
+      const { data } = await api.put(`/printers/${id}`, { status: newStatus })
+      setPrinters(prev => prev.map(p => p._id === id ? data : p))
+    } catch (err) {
+      addNotification({ type: 'error', title: 'Status Update Failed', message: err.message })
+    }
   }
 
   const handleTestPrint = (printer) => {
@@ -349,7 +348,7 @@ export default function PrinterManagementPage() {
           const ConnIcon = conn.icon
           return (
             <motion.div
-              key={printer.id}
+              key={printer._id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
@@ -430,7 +429,7 @@ export default function PrinterManagementPage() {
                   className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-amber-50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 transition-colors">
                   <Edit3 className="w-3 h-3 inline mr-1" />Edit
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); toggleStatus(printer.id) }}
+                <button onClick={(e) => { e.stopPropagation(); toggleStatus(printer._id) }}
                   className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-surface-50 dark:bg-surface-800 text-surface-600 dark:text-surface-400 hover:bg-surface-100 transition-colors">
                   <Signal className="w-3 h-3 inline mr-1" />{printer.status === 'online' ? 'Off' : 'On'}
                 </button>
@@ -440,11 +439,17 @@ export default function PrinterManagementPage() {
         })}
       </div>
 
-      {filtered.length === 0 && (
+      {filtered.length === 0 && !isLoading && (
         <div className="flex flex-col items-center justify-center py-16 text-surface-400">
           <Printer className="w-14 h-14 mb-3 opacity-20" />
-          <p className="text-base font-semibold">No printers found</p>
-          <p className="text-sm mt-1">Add a printer to get started</p>
+          <p className="text-base font-semibold">{printers.length === 0 ? 'No printers configured' : 'No printers match filters'}</p>
+          <p className="text-sm mt-1">{printers.length === 0 ? 'Add your first printer to get started' : 'Try adjusting your search or filter'}</p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
         </div>
       )}
 
@@ -566,7 +571,7 @@ export default function PrinterManagementPage() {
                     className="py-3 rounded-xl bg-blue-500 text-white font-bold text-sm hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/25">
                     <TestTube className="w-4 h-4 inline mr-1.5" />Test Print
                   </button>
-                  <button onClick={() => { handleSetDefault(selectedPrinter.id); setSelectedPrinter(null) }}
+                  <button onClick={() => { handleSetDefault(selectedPrinter._id); setSelectedPrinter(null) }}
                     className="py-3 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 active:scale-95 transition-all shadow-lg shadow-amber-500/25">
                     <CheckCircle className="w-4 h-4 inline mr-1.5" />Set Default
                   </button>

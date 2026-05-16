@@ -5,6 +5,7 @@ import useOrderStore from '@/store/orderStore'
 import useUIStore from '@/store/uiStore'
 import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import { cn, formatCurrency } from '@/lib/utils'
+import api from '@/lib/api'
 
 const statusConfig = {
   all: { label: 'All Orders', color: 'badge-secondary' },
@@ -24,10 +25,17 @@ export default function OrderHistoryPage() {
   const { restaurantSettings } = useTenantSettingsStore()
 
   useEffect(() => {
-    // Fetch specifically completed and cancelled orders if API allowed it.
-    // For now we get all and filter locally based on useOrderStore behavior.
     fetchOrders('all')
   }, [fetchOrders])
+
+  // Fetch default printer config
+  const [defaultPrinter, setDefaultPrinter] = useState(null)
+  useEffect(() => {
+    api.get('/printers').then(({ data }) => {
+      const def = data.find(p => p.isDefault) || data[0]
+      if (def) setDefaultPrinter(def)
+    }).catch(() => {})
+  }, [])
 
   // Process and filter historical orders (Completed & Cancelled mostly, though we can show all)
   const filteredOrders = orders.filter(order => {
@@ -60,9 +68,15 @@ export default function OrderHistoryPage() {
   const cancelledOrders = filteredOrders.filter(o => o.status === 'cancelled').length
 
   const handlePrint = () => {
-    // In a real app this would hook into thermal printer API.
+    // Set dynamic receipt width from default printer's paper size
+    const paperWidthMap = {
+      '58mm': '58mm', '80mm': '80mm', 'A4': '210mm', 'A5': '148mm',
+      'A6': '105mm', 'Label (40×30)': '40mm', 'Label (60×40)': '60mm', 'Custom': '80mm'
+    }
+    const width = paperWidthMap[defaultPrinter?.paperSize] || '80mm'
+    document.documentElement.style.setProperty('--receipt-width', width)
     window.print()
-    addNotification({ type: 'success', title: 'Printing...', message: 'Receipt dispatched to printer.' })
+    addNotification({ type: 'success', title: 'Printing...', message: `Receipt dispatched to printer${defaultPrinter ? ` (${defaultPrinter.paperSize})` : ''}.` })
   }
 
   const handleRefund = async (order) => {
