@@ -4,6 +4,7 @@ import useCartStore from '@/store/cartStore'
 import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useTableStore from '@/store/tableStore'
+import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import { formatCurrency, cn } from '@/lib/utils'
 import useCounterId from '@/hooks/useCounterId'
 import { useState, useEffect } from 'react'
@@ -34,6 +35,20 @@ export default function CartPanel() {
     fetchTables()
     fetchOrders('all') // Fetch all to get pending ones
   }, [fetchTables, fetchOrders])
+
+  // Load GST rate from restaurant settings
+  useEffect(() => {
+    const loadGstRate = async () => {
+      try {
+        const settings = useTenantSettingsStore.getState().restaurantSettings
+          || await useTenantSettingsStore.getState().fetchSettings()
+        if (settings?.settings?.gstRate != null) {
+          useCartStore.getState().setGstRate(settings.settings.gstRate)
+        }
+      } catch (e) { /* use default */ }
+    }
+    loadGstRate()
+  }, [])
 
   const dueOrders = orders.filter(o => o.paymentStatus === 'pending')
 
@@ -442,11 +457,11 @@ export default function CartPanel() {
             )}
             
             <div className="flex items-center justify-between text-xs text-surface-400">
-              <span>CGST (2.5%)</span>
+              <span>CGST ({(tax.rate / 2).toFixed(1)}%)</span>
               <span className="font-mono">{formatCurrency(tax.cgst)}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-surface-400">
-              <span>SGST (2.5%)</span>
+              <span>SGST ({(tax.rate / 2).toFixed(1)}%)</span>
               <span className="font-mono">{formatCurrency(tax.sgst)}</span>
             </div>
             

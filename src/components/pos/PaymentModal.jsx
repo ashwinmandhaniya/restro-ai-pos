@@ -349,7 +349,7 @@ export default function PaymentModal() {
         <div style={{ fontSize: '12px', textAlign: 'right' }}>
           <p style={{ margin: '2px 0' }}>Subtotal: {getSubtotal().toFixed(2)}</p>
           {getDiscountAmount() > 0 && <p style={{ margin: '2px 0' }}>Discount: -{getDiscountAmount().toFixed(2)}</p>}
-          <p style={{ margin: '2px 0' }}>GST (5%): {getTax().total.toFixed(2)}</p>
+          <p style={{ margin: '2px 0' }}>GST ({getTax().rate}%): {getTax().total.toFixed(2)}</p>
           <p style={{ fontSize: '16px', fontWeight: 'bold', margin: '5px 0' }}>Total: {getTotal().toFixed(2)}</p>
         </div>
 

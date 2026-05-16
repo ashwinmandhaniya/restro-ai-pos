@@ -11,6 +11,7 @@ import useCartStore from '@/store/cartStore'
 import useUIStore from '@/store/uiStore'
 import useOrderStore from '@/store/orderStore'
 import useTableStore from '@/store/tableStore'
+import useTenantSettingsStore from '@/store/tenantSettingsStore'
 import { formatCurrency, cn } from '@/lib/utils'
 import useCounterId from '@/hooks/useCounterId'
 import PaymentModal from '@/components/pos/PaymentModal'
@@ -67,6 +68,20 @@ export default function TouchScreenPOSPage() {
     fetchTables()
     fetchOrders('all')
   }, [fetchMenuData, fetchTables, fetchOrders])
+
+  // Load GST rate from restaurant settings
+  useEffect(() => {
+    const loadGstRate = async () => {
+      try {
+        const settings = useTenantSettingsStore.getState().restaurantSettings
+          || await useTenantSettingsStore.getState().fetchSettings()
+        if (settings?.settings?.gstRate != null) {
+          useCartStore.getState().setGstRate(settings.settings.gstRate)
+        }
+      } catch (e) { /* use default */ }
+    }
+    loadGstRate()
+  }, [])
 
   // Sync order type
   useEffect(() => { setCartOrderType(orderType) }, [orderType, setCartOrderType])
@@ -617,7 +632,7 @@ export default function TouchScreenPOSPage() {
                     )}
 
                     <div className="flex justify-between text-xs text-surface-400">
-                      <span>GST (5%)</span>
+                      <span>GST ({tax.rate}%)</span>
                       <span className="font-mono">{formatCurrency(tax.total)}</span>
                     </div>
                     <div className="flex justify-between text-lg pt-2 border-t border-dashed border-surface-200 dark:border-surface-700">

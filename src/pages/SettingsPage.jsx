@@ -149,7 +149,7 @@ export default function SettingsPage() {
         address: formData.address,
         settings: {
           currency: formData.currency,
-          gstRate: formData.gstRate,
+          gstRate: Number(formData.gstRate) || 5,
           billSettings: {
             brandName: formData.brandName,
             logoUrl: formData.logoUrl,
@@ -179,6 +179,8 @@ export default function SettingsPage() {
         }
       }
       await updateSettings(payload)
+      // Push updated GST rate to cart store so POS reflects the change immediately
+      try { (await import('@/store/cartStore')).default.getState().setGstRate(Number(formData.gstRate) || 5) } catch(e) {}
       addNotification({ type: 'success', title: 'Settings Saved', message: 'Your restaurant settings have been updated successfully.' })
     } catch (err) {
       console.error(err)

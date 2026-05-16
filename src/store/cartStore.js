@@ -8,6 +8,7 @@ const useCartStore = create((set, get) => ({
   orderType: 'dine-in', // dine-in, takeaway, delivery
   discount: { type: 'none', value: 0 }, // type: none, percentage, flat
   notes: '',
+  gstRate: 5, // default 5%, updated from restaurant settings
   heldOrders: [],
   activeOrderId: null, // Link to DB _id for existing orders being billed
 
@@ -108,13 +109,19 @@ const useCartStore = create((set, get) => ({
     return 0
   },
 
-  // Calculate tax
+  // Set GST rate from restaurant settings
+  setGstRate: (rate) => set({ gstRate: Number(rate) || 5 }),
+
+  // Calculate tax (uses dynamic gstRate from settings)
   getTax: () => {
     const subtotal = get().getSubtotal() - get().getDiscountAmount()
+    const rate = get().gstRate
+    const halfRate = rate / 2 / 100 // e.g. 5% -> 0.025 each for CGST/SGST
     return {
-      cgst: subtotal * 0.025,
-      sgst: subtotal * 0.025,
-      total: subtotal * 0.05,
+      cgst: subtotal * halfRate,
+      sgst: subtotal * halfRate,
+      total: subtotal * (rate / 100),
+      rate: rate,
     }
   },
 
