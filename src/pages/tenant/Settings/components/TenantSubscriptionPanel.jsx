@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Crown, CheckCircle2, AlertCircle, Loader2, Calendar, CreditCard, Zap, Send, MessageSquare, Plus, ArrowLeft, Clock, ChevronRight } from 'lucide-react';
+import { Crown, CheckCircle2, AlertCircle, Loader2, Calendar, CreditCard, Zap, Send, MessageSquare, Plus, ArrowLeft, Clock, ChevronRight, ArrowUpRight, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -143,6 +143,13 @@ export default function TenantSubscriptionPanel() {
             </div>
           )}
         </>
+      )}
+
+      {/* ─── Upgrade Plan ─── */}
+      {currentPlan && (
+        <div className="pt-8 border-t border-surface-200 dark:border-surface-700">
+          <UpgradePlanModule currentPlanId={currentPlan._id} currentPlanName={currentPlan.name} />
+        </div>
       )}
 
       {/* ─── Contact Support ─── */}
@@ -482,6 +489,176 @@ function TicketDetail({ ticket, onReplied }) {
       ) : (
         <div className="p-3 rounded-lg bg-surface-100 dark:bg-surface-800 text-center">
           <p className="text-sm text-surface-500">This ticket has been {ticket.status.replace(/_/g, ' ')}. Create a new ticket if you need further help.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ────────── Upgrade Plan Module ────────── */
+function UpgradePlanModule({ currentPlanId, currentPlanName }) {
+  const [plans, setPlans] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [billingCycle, setBillingCycle] = useState('monthly');
+  const [reason, setReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [plansRes, reqRes] = await Promise.all([
+          api.get('/tenant/upgrade/plans'),
+          api.get('/tenant/upgrade/requests')
+        ]);
+        setPlans(plansRes.data.data || []);
+        setRequests(reqRes.data.data || []);
+      } catch (err) { console.error('[Upgrade] load error:', err); }
+      finally { setIsLoading(false); }
+    };
+    load();
+  }, []);
+
+  const hasPending = requests.some(r => r.status === 'pending');
+  const otherPlans = plans.filter(p => p._id !== currentPlanId);
+
+  const handleSubmit = async () => {
+    if (!selectedPlan) { setError('Please select a plan.'); return; }
+    setIsSubmitting(true); setError(''); setSuccess('');
+    try {
+      const { data } = await api.post('/tenant/upgrade/requests', {
+        requestedPlanId: selectedPlan._id, preferredBillingCycle: billingCycle, reason
+      });
+      setRequests(prev => [data.data, ...prev]);
+      setSelectedPlan(null); setReason('');
+      setSuccess('Upgrade request submitted! Our team will review it shortly.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit request');
+    } finally { setIsSubmitting(false); }
+  };
+
+  const reqStatusConfig = {
+    pending: { label: 'Pending', cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+    approved: { label: 'Approved', cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
+    rejected: { label: 'Rejected', cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
+  };
+
+  if (isLoading) return <div className="py-6 text-center"><Loader2 className="w-6 h-6 text-primary-500 animate-spin mx-auto" /></div>;
+
+  return (
+    <div>
+      <h4 className="text-base font-bold text-surface-900 dark:text-white mb-1 flex items-center gap-2">
+        <Rocket className="w-4 h-4 text-violet-500" />Upgrade Plan
+      </h4>
+      <p className="text-xs text-surface-500 mb-5">Compare plans and request an upgrade. Our team will process it within 24 hours.</p>
+
+      {error && <div className="p-3 mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">{error}</div>}
+      {success && <div className="p-3 mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm">{success}</div>}
+
+      {/* Billing Toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        {['monthly', 'yearly'].map(c => (
+          <button key={c} onClick={() => setBillingCycle(c)}
+            className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all border',
+              billingCycle === c ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'border-surface-200 dark:border-surface-700 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+            )}>{c}{c === 'yearly' && <span className="ml-1 text-emerald-500 text-[10px]">Save more</span>}</button>
+        ))}
+      </div>
+
+      {/* Plan Cards */}
+      {otherPlans.length === 0 ? (
+        <div className="py-8 text-center rounded-xl border-2 border-dashed border-surface-200 dark:border-surface-700">
+          <p className="text-sm text-surface-500">No other plans available at the moment.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {otherPlans.map(plan => {
+            const price = billingCycle === 'yearly' ? plan.price?.yearly : plan.price?.monthly;
+            const isSelected = selectedPlan?._id === plan._id;
+            return (
+              <button key={plan._id} onClick={() => { setSelectedPlan(plan); setError(''); setSuccess(''); }}
+                className={cn('relative text-left p-5 rounded-xl border transition-all',
+                  isSelected ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/10 ring-1 ring-primary-500/30' : 'border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-900 hover:border-primary-300 dark:hover:border-primary-600'
+                )}>
+                {plan.isPopular && <span className="absolute top-2 right-2 text-[9px] px-2 py-0.5 rounded-full bg-violet-500 text-white font-bold">Popular</span>}
+                {isSelected && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-primary-500" />}
+                <p className="text-sm font-bold text-surface-900 dark:text-white mb-1">{plan.name}</p>
+                <p className="text-xs text-surface-500 line-clamp-2 mb-3">{plan.description}</p>
+                <p className="text-xl font-black text-surface-900 dark:text-white">₹{price?.toLocaleString() || 0}
+                  <span className="text-xs font-normal text-surface-400 ml-1">/{billingCycle === 'yearly' ? 'yr' : 'mo'}</span>
+                </p>
+                <div className="mt-3 space-y-1">
+                  {plan.features?.slice(0, 4).map(f => (
+                    <p key={f} className="text-[11px] text-surface-500 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                      <span className="capitalize">{f.replace(/_/g, ' ')}</span>
+                    </p>
+                  ))}
+                  {plan.features?.length > 4 && <p className="text-[10px] text-surface-400">+{plan.features.length - 4} more</p>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Request Form */}
+      {selectedPlan && !hasPending && (
+        <div className="p-5 rounded-xl bg-surface-50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-surface-900 dark:text-white">Request Upgrade to {selectedPlan.name}</p>
+              <p className="text-xs text-surface-500">{currentPlanName} → {selectedPlan.name} ({billingCycle})</p>
+            </div>
+            <ArrowUpRight className="w-5 h-5 text-primary-500" />
+          </div>
+          <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2}
+            placeholder="Any notes for the admin? (optional)"
+            className="input w-full" />
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setSelectedPlan(null)} className="btn-secondary btn-sm">Cancel</button>
+            <button onClick={handleSubmit} disabled={isSubmitting} className="btn-primary btn-sm flex items-center gap-2">
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+              {isSubmitting ? 'Submitting...' : 'Request Upgrade'}
+            </button>
+          </div>
+        </div>
+      )}
+      {hasPending && (
+        <div className="p-4 mb-6 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm flex items-center gap-2">
+          <Clock className="w-4 h-4 flex-shrink-0" />
+          You have a pending upgrade request. Please wait for it to be processed before submitting a new one.
+        </div>
+      )}
+
+      {/* Request History */}
+      {requests.length > 0 && (
+        <div>
+          <h5 className="text-sm font-bold text-surface-900 dark:text-white mb-3">Upgrade Request History</h5>
+          <div className="space-y-2">
+            {requests.map(r => {
+              const sc = reqStatusConfig[r.status] || reqStatusConfig.pending;
+              return (
+                <div key={r._id} className="p-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-900">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-surface-900 dark:text-white">
+                        {r.currentPlanId?.name || '?'} → {r.requestedPlanId?.name || '?'}
+                      </p>
+                      <p className="text-xs text-surface-500 mt-0.5">
+                        {r.requestNumber} • {r.preferredBillingCycle} • {new Date(r.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                      {r.adminNote && <p className="text-xs text-surface-500 mt-1 italic">Admin: {r.adminNote}</p>}
+                    </div>
+                    <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0', sc.cls)}>{sc.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

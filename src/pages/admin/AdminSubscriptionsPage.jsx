@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, Plus, X, Crown, Zap, Rocket, Building2, Pencil, Trash2, Ban, Search, CheckCircle2, RefreshCw, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Plus, X, Crown, Zap, Rocket, Building2, Pencil, Trash2, Ban, Search, CheckCircle2, RefreshCw, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ArrowUpRight, Check, XCircle } from 'lucide-react';
 import useAdminPlanStore from '@/store/adminPlanStore';
 import useAdminTenantStore from '@/store/adminTenantStore';
 import { cn } from '@/lib/utils';
@@ -111,7 +111,7 @@ const planIcons = { 'free-trial': Zap, 'starter': CreditCard, 'growth': Rocket, 
 const planColors = { 'free-trial': 'from-slate-500 to-slate-600', 'starter': 'from-blue-500 to-cyan-600', 'growth': 'from-violet-500 to-fuchsia-600', 'enterprise': 'from-amber-500 to-orange-600' };
 
 export default function AdminSubscriptionsPage() {
-  const { plans, subscriptions, pagination, fetchPlans, fetchSubscriptions, assignSubscription, updateSubscription, createPlan, updatePlan, deletePlan, isLoading } = useAdminPlanStore();
+  const { plans, subscriptions, pagination, fetchPlans, fetchSubscriptions, assignSubscription, updateSubscription, createPlan, updatePlan, deletePlan, isLoading, upgradeRequests, fetchUpgradeRequests, processUpgradeRequest } = useAdminPlanStore();
   const [showAssign, setShowAssign] = useState(false);
   const [assignForm, setAssignForm] = useState({ restaurantId: '', planId: '', billingCycle: 'monthly' });
   const [tab, setTab] = useState('plans');
@@ -207,8 +207,8 @@ export default function AdminSubscriptionsPage() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {['plans', 'subscriptions'].map(t => (
-          <button key={t} onClick={() => setTab(t)} className={cn('px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all', tab === t ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700')}>{t}</button>
+        {['plans', 'subscriptions', 'requests'].map(t => (
+          <button key={t} onClick={() => { setTab(t); if (t === 'requests') fetchUpgradeRequests(); }} className={cn('px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all', tab === t ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700')}>{t === 'requests' ? 'Upgrade Requests' : t}</button>
         ))}
       </div>
 
@@ -253,6 +253,43 @@ export default function AdminSubscriptionsPage() {
               </motion.div>
             );
           })}
+        </div>
+      ) : tab === 'requests' ? (
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-800">
+              {['Request #', 'Restaurant', 'Current Plan', 'Requested Plan', 'Billing', 'Status', 'Date', 'Actions'].map(h => (
+                <th key={h} className="text-left py-3 px-4 text-xs text-slate-500 font-semibold uppercase">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {upgradeRequests.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-16 text-slate-500">No upgrade requests yet</td></tr>
+              ) : upgradeRequests.map(req => {
+                const sBadge = { pending: 'bg-amber-500/20 text-amber-400', approved: 'bg-emerald-500/20 text-emerald-400', rejected: 'bg-red-500/20 text-red-400' };
+                return (
+                  <tr key={req._id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                    <td className="py-3 px-4 text-white font-mono text-xs">{req.requestNumber}</td>
+                    <td className="py-3 px-4"><p className="text-white font-medium text-sm">{req.restaurantId?.name || '—'}</p><p className="text-[11px] text-slate-500">{req.restaurantId?.email}</p></td>
+                    <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">{req.currentPlanId?.name}</span></td>
+                    <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300">{req.requestedPlanId?.name}</span></td>
+                    <td className="py-3 px-4 text-slate-400 capitalize">{req.preferredBillingCycle}</td>
+                    <td className="py-3 px-4"><span className={cn('text-xs px-2.5 py-1 rounded-full font-medium capitalize', sBadge[req.status])}>{req.status}</span></td>
+                    <td className="py-3 px-4 text-slate-500 text-xs">{new Date(req.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4">
+                      {req.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <button onClick={() => { if(confirm('Approve this upgrade request?')) processUpgradeRequest(req._id, { status: 'approved', adminNote: 'Approved' }); }} className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 transition-colors" title="Approve"><Check className="w-4 h-4" /></button>
+                          <button onClick={() => { const note = prompt('Rejection reason (optional):'); if(note !== null) processUpgradeRequest(req._id, { status: 'rejected', adminNote: note || 'Rejected' }); }} className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors" title="Reject"><XCircle className="w-4 h-4" /></button>
+                        </div>
+                      )}
+                      {req.status !== 'pending' && <span className="text-xs text-slate-600">{req.adminNote}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">

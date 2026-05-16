@@ -47,6 +47,23 @@ const useAdminPlanStore = create((set) => ({
     const res = await adminApi.patch(`/subscriptions/${id}`, data);
     set((s) => ({ subscriptions: s.subscriptions.map(sub => sub._id === id ? res.data.data : sub) }));
     return res.data.data;
+  },
+
+  // Upgrade Requests
+  upgradeRequests: [], upgradePagination: null,
+
+  fetchUpgradeRequests: async (params = {}) => {
+    set({ isLoading: true });
+    try {
+      const res = await adminApi.get('/upgrade-requests', { params });
+      set({ upgradeRequests: res.data.data, upgradePagination: res.data.pagination, isLoading: false });
+    } catch (e) { set({ isLoading: false }); }
+  },
+
+  processUpgradeRequest: async (id, data) => {
+    const res = await adminApi.patch(`/upgrade-requests/${id}`, data);
+    set((s) => ({ upgradeRequests: s.upgradeRequests.map(r => r._id === id ? res.data.data : r) }));
+    return res.data.data;
   }
 }));
 
