@@ -73,6 +73,20 @@ const useAdminTransactionStore = create((set, get) => ({
       console.error('Failed to update transaction', err);
       return false;
     }
+  },
+
+  deleteTransaction: async (id) => {
+    try {
+      await adminApi.delete(`/transactions/${id}`);
+      set((state) => ({
+        transactions: state.transactions.filter(t => t._id !== id)
+      }));
+      get().fetchStats();
+      return true;
+    } catch (err) {
+      console.error('Failed to delete transaction', err);
+      return false;
+    }
   }
 }));
 

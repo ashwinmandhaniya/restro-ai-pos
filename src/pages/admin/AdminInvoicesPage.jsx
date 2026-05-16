@@ -3,7 +3,7 @@ import useAdminTransactionStore from '@/store/adminTransactionStore';
 import {
   FileText, IndianRupee, Clock, Search, CheckCircle, XCircle,
   AlertCircle, RefreshCw, Receipt, Filter, Plus, X, ArrowUpRight,
-  ShoppingCart, RotateCcw, ArrowUp, ArrowDown, CreditCard, Banknote, Edit3
+  ShoppingCart, RotateCcw, ArrowUp, ArrowDown, CreditCard, Banknote, Edit3, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,7 +48,7 @@ const statusBadge = {
 };
 
 export default function AdminInvoicesPage() {
-  const { transactions, stats, pagination, isLoading, error, fetchTransactions, fetchStats, createTransaction, updateTransaction } = useAdminTransactionStore();
+  const { transactions, stats, pagination, isLoading, error, fetchTransactions, fetchStats, createTransaction, updateTransaction, deleteTransaction } = useAdminTransactionStore();
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -83,6 +83,12 @@ export default function AdminInvoicesPage() {
   const handleStatusChange = async (id, newStatus) => {
     if (confirm(`Mark this transaction as ${newStatus}?`)) {
       await updateTransaction(id, { status: newStatus });
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+      await deleteTransaction(id);
     }
   };
 
@@ -291,6 +297,10 @@ export default function AdminInvoicesPage() {
                           <button title="Edit Transaction" onClick={() => openEditModal(txn)}
                             className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all active:scale-90">
                             <Edit3 size={17} />
+                          </button>
+                          <button title="Delete Transaction" onClick={() => handleDelete(txn._id)}
+                            className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all active:scale-90">
+                            <Trash2 size={17} />
                           </button>
                         </div>
                       </td>
